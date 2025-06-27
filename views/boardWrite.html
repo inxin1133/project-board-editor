@@ -1,0 +1,17 @@
+{% extends "layout_main.html" %}
+{% block title %}게시글 작성{% endblock %}
+{% block content %}
+<h2 class="mb-4">게시글 작성</h2>
+<form>
+  <div class="mb-3">
+    <label for="inputTitle" class="form-label">제목</label>
+    <input type="text" class="form-control" id="inputTitle" placeholder="제목 입력">
+  </div>
+  <div class="mb-3">
+    <label for="inputContent" class="form-label">내용</label>
+    <textarea class="form-control" id="inputContent" rows="6" placeholder="내용 입력"></textarea>
+  </div>
+  <button type="submit" class="btn btn-primary">등록</button>
+  <a href="/board" class="btn btn-secondary">취소</a>
+</form>
+{% endblock %} 

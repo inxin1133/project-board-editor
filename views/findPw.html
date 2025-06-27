@@ -1,0 +1,16 @@
+{% extends "layout_intro.html" %}
+{% block title %}비밀번호 찾기{% endblock %}
+{% block content %}
+<h2 class="mb-4 text-center">비밀번호 찾기</h2>
+<form>
+  <div class="mb-3">
+    <label for="inputId" class="form-label">아이디</label>
+    <input type="text" class="form-control" id="inputId" placeholder="아이디 입력">
+  </div>
+  <div class="mb-3">
+    <label for="inputEmail" class="form-label">이메일</label>
+    <input type="email" class="form-control" id="inputEmail" placeholder="가입한 이메일 입력">
+  </div>
+  <button type="submit" class="btn btn-primary w-100">비밀번호 찾기</button>
+</form>
+{% endblock %} 

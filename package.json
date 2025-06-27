@@ -1,0 +1,25 @@
+{
+  "scripts": {
+    "start": "node app.js",
+    "dev": "nodemon app.js",
+    "app": "nodemon app"
+  },
+  "name": "project-board",
+  "version": "0.0.1",
+  "main": "app.js",
+  "author": "Kangwoo",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "dotenv": "^16.6.0",
+    "express": "^5.1.0",
+    "nunjucks": "^3.2.4",
+    "bcrypt": "^6.0.0", 
+    "express-async-handler": "^1.2.0",
+    "bootstrap": "^5.3.7"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.10"
+  }
+}
+ 
