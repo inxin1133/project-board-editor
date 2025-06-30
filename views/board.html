@@ -2,7 +2,7 @@
 {% block title %}게시판 목록{% endblock %}
 {% block content %}
 <h2 class="mb-4">게시판 목록</h2>
-<a href="/boardWrite" class="btn btn-success mb-3">글쓰기</a>
+<a href="/board/write" class="btn btn-success mb-3">글쓰기</a>
 <table class="table table-hover">
   <thead class="table-light">
     <tr>
@@ -17,17 +17,17 @@
     <!-- 예시 데이터 -->
     <tr>
       <td>1</td>
-      <td><a href="/boardRead?id=1">첫 번째 게시글</a></td>
+      <td><a href="/board/read?id=1">첫 번째 게시글</a></td>
       <td>user01</td>
       <td>2024-06-01</td>
-      <td><a href="/boardEdit?id=1" class="btn btn-sm btn-warning">수정</a></td>
+      <td><a href="/board/edit?id=1" class="btn btn-sm btn-warning">수정</a></td>
     </tr>
     <tr>
       <td>2</td>
-      <td><a href="/boardRead?id=2">두 번째 게시글</a></td>
+      <td><a href="/board/read?id=2">두 번째 게시글</a></td>
       <td>user02</td>
       <td>2024-06-02</td>
-      <td><a href="/boardEdit?id=2" class="btn btn-sm btn-warning">수정</a></td>
+      <td><a href="/board/edit?id=2" class="btn btn-sm btn-warning">수정</a></td>
     </tr>
   </tbody>
 </table>

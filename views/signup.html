@@ -2,23 +2,52 @@
 {% block title %}회원가입{% endblock %}
 {% block content %}
 <h2 class="mb-4 text-center">회원가입</h2>
-<form>
+<form id="signupForm" method="POST" action="/signup">
   <div class="mb-3">
     <label for="inputId" class="form-label">아이디</label>
-    <input type="text" class="form-control" id="inputId" placeholder="아이디 입력">
-  </div>
-  <div class="mb-3">
-    <label for="inputEmail" class="form-label">이메일</label>
-    <input type="email" class="form-control" id="inputEmail" placeholder="이메일 입력">
+    <input type="text" class="form-control" id="inputId" name="username" placeholder="아이디 입력" required>
   </div>
   <div class="mb-3">
     <label for="inputPw" class="form-label">비밀번호</label>
-    <input type="password" class="form-control" id="inputPw" placeholder="비밀번호 입력">
+    <input type="password" class="form-control" id="inputPw" name="password" placeholder="비밀번호 입력" required>
   </div>
   <div class="mb-3">
     <label for="inputPw2" class="form-label">비밀번호 확인</label>
-    <input type="password" class="form-control" id="inputPw2" placeholder="비밀번호 확인">
+    <input type="password" class="form-control" id="inputPw2" name="password2" placeholder="비밀번호 확인" required>
   </div>
-  <button type="submit" class="btn btn-primary w-100">회원가입</button>
+  <div class="mb-3">
+    <label for="inputEmail" class="form-label">이메일</label>
+    <input type="email" class="form-control" id="inputEmail" name="email" placeholder="이메일 입력" required>
+  </div>
+  <div class="mb-3">
+    <label for="inputName" class="form-label">이름</label>
+    <input type="text" class="form-control" id="inputName" name="name" placeholder="이름 입력" required>
+  </div>
+  <div class="mb-3">
+    <label for="inputPhone" class="form-label">전화번호</label>
+    <input type="text" class="form-control" id="inputPhone" name="phone" placeholder="전화번호 입력" required>
+  </div>
+  <div class="mb-3">
+    <label class="form-label">개인정보 활용 동의</label>
+    <div style="height:100px; overflow-y:scroll; border:1px solid #ccc; padding:10px; background:#f8f9fa; font-size:0.95em;">
+      본인은 개인정보 수집 및 이용에 동의합니다. (예시 문구: 실제 서비스에 맞게 수정하세요)<br>
+      - 수집항목: 아이디, 비밀번호, 이메일, 이름, 전화번호<br>
+      - 이용목적: 회원 관리, 서비스 제공<br>
+      - 보유기간: 회원 탈퇴 시까지<br>
+      ...
+    </div>
+    <div class="form-check mt-2">
+      <input class="form-check-input" type="checkbox" id="agreeCheck">
+      <label class="form-check-label" for="agreeCheck">동의합니다</label>
+    </div>
+  </div>
+  <button type="submit" class="btn btn-primary w-100" id="submitBtn" disabled>작성완료</button>
 </form>
+<script>
+  const agreeCheck = document.getElementById('agreeCheck');
+  const submitBtn = document.getElementById('submitBtn');
+  agreeCheck.addEventListener('change', function() {
+    submitBtn.disabled = !this.checked;
+  });
+</script>
 {% endblock %} 

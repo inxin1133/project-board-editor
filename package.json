@@ -9,17 +9,20 @@
   "main": "app.js",
   "author": "Kangwoo",
   "license": "ISC",
-  "description": "",
+  "description": "Project board with authentication, MongoDB, and controllers directory for logic.",
   "dependencies": {
+    "bcrypt": "^6.0.0",
+    "bootstrap": "^5.3.7",
+    "connect-mongo": "^5.1.0",
     "dotenv": "^16.6.0",
     "express": "^5.1.0",
-    "nunjucks": "^3.2.4",
-    "bcrypt": "^6.0.0", 
     "express-async-handler": "^1.2.0",
-    "bootstrap": "^5.3.7"
+    "express-session": "^1.18.1",
+    "mongoose": "^8.16.1",
+    "nodemailer": "^7.0.4",
+    "nunjucks": "^3.2.4"
   },
   "devDependencies": {
     "nodemon": "^3.1.10"
   }
 }
- 

@@ -2,10 +2,14 @@
 {% block title %}아이디 찾기{% endblock %}
 {% block content %}
 <h2 class="mb-4 text-center">아이디 찾기</h2>
-<form>
+<form method="POST" action="/findId">
+  <div class="mb-3">
+    <label for="inputName" class="form-label">이름</label>
+    <input type="text" class="form-control" id="inputName" name="name" placeholder="이름 입력" required>
+  </div>
   <div class="mb-3">
     <label for="inputEmail" class="form-label">이메일</label>
-    <input type="email" class="form-control" id="inputEmail" placeholder="가입한 이메일 입력">
+    <input type="email" class="form-control" id="inputEmail" name="email" placeholder="가입한 이메일 입력" required>
   </div>
   <button type="submit" class="btn btn-primary w-100">아이디 찾기</button>
 </form>

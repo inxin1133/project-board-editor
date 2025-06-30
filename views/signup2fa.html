@@ -2,10 +2,10 @@
 {% block title %}2차 인증{% endblock %}
 {% block content %}
 <h2 class="mb-4 text-center">2차 인증</h2>
-<form>
+<form method="POST" action="/signup2fa">
   <div class="mb-3">
     <label for="inputCode" class="form-label">인증 코드</label>
-    <input type="text" class="form-control" id="inputCode" placeholder="인증 코드를 입력하세요">
+    <input type="text" class="form-control" id="inputCode" name="code" placeholder="인증 코드를 입력하세요" required>
   </div>
   <button type="submit" class="btn btn-primary w-100">확인</button>
 </form>
