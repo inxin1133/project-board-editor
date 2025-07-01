@@ -13,7 +13,7 @@ router.get('/signup', (req, res) => {
 router.post('/signup', require('../controllers/authController').signup);
 
 router.get('/signup2fa', (req, res) => {
-  res.render('signup2fa', { title: '2차 인증' });
+  res.render('signup2fa', { title: '2차 인증', message: req.query.message || null });
 });
 router.post('/signup2fa', require('../controllers/authController').verify2fa);
 
@@ -35,7 +35,10 @@ router.post('/findPw', require('../controllers/authController').findPw);
 
 // 메인 홈
 router.get('/home', (req, res) => {
-  res.render('home', { title: '홈' });
+  if (!req.session.userId) {
+    return res.redirect('/');
+  }
+  res.render('home', { title: '홈', name: req.session.name });
 });
 
 router.get('/logout', (req, res) => {
@@ -43,5 +46,7 @@ router.get('/logout', (req, res) => {
     res.redirect('/');
   });
 });
+
+router.post('/resend2fa', require('../controllers/authController').resend2fa);
 
 module.exports = router; 
