@@ -1,0 +1,22 @@
+{% extends "layout_intro.html" %}
+{% block title %}비밀번호 변경{% endblock %}
+{% block content %}
+<div class="text-center">
+  <h2 class="mb-4">비밀번호 변경</h2>
+  <form method="POST" action="/changePw">
+    <div class="mb-3">
+      <label for="inputPw" class="form-label">새 비밀번호</label>
+      <input type="password" class="form-control" id="inputPw" name="newPassword" placeholder="새 비밀번호 입력" required>
+    </div>
+    <div class="mb-3">
+      <label for="inputPw2" class="form-label">새 비밀번호 확인</label>
+      <input type="password" class="form-control" id="inputPw2" name="newPassword2" placeholder="새 비밀번호 확인" required>
+    </div>
+    <button type="submit" class="btn btn-primary w-100">비밀번호 변경</button>
+  </form>
+  <div class="mt-4">
+    <p>비밀번호를 변경하지 않고 그냥 사용하기</p>
+    <a href="/home" class="btn btn-secondary w-100">홈으로 이동</a>
+  </div>
+</div>
+{% endblock %} 
