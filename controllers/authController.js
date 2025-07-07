@@ -157,6 +157,7 @@ exports.login = async (req, res) => {
     req.session.userId = user._id;
     req.session.username = user.username;
     req.session.name = user.name;
+    req.session.role = user.role;
     if (user.tempPassword) {
       return res.redirect('/changePw');
     }
@@ -272,5 +273,132 @@ exports.changePw = async (req, res) => {
   } catch (err) {
     console.error('비밀번호 변경 오류:', err);
     res.status(500).send('비밀번호 변경 중 오류가 발생했습니다.');
+  }
+};
+
+// 회원 상태 변경
+exports.updateUserState = async (req, res) => {
+  try {
+    const { username, state } = req.body;
+    if (!username || !state) return res.json({ success: false, message: '필수 정보 누락' });
+    const user = await User.findOneAndUpdate({ username }, { state, updateAt: new Date() }, { new: true });
+    if (!user) return res.json({ success: false, message: '사용자 없음' });
+    res.json({ success: true });
+  } catch (err) {
+    console.error('회원 상태 변경 오류:', err);
+    res.json({ success: false, message: '서버 오류' });
+  }
+};
+
+// 회원 권한 변경
+exports.updateUserRole = async (req, res) => {
+  try {
+    const { username, role } = req.body;
+    if (!username || !role) return res.json({ success: false, message: '필수 정보 누락' });
+    const user = await User.findOneAndUpdate({ username }, { role, updateAt: new Date() }, { new: true });
+    if (!user) return res.json({ success: false, message: '사용자 없음' });
+    res.json({ success: true });
+  } catch (err) {
+    console.error('회원 권한 변경 오류:', err);
+    res.json({ success: false, message: '서버 오류' });
+  }
+};
+
+// 사용자 목록 (pagination)
+exports.userList = async (req, res) => {
+  try {
+    const perPage = parseInt(req.query.limit) || 10;
+    const page = parseInt(req.query.page) || 1;
+    const sort = req.query.sort === 'asc' ? 'asc' : 'desc';
+    const total = await User.countDocuments();
+    const sortOption = sort === 'asc' ? 1 : -1;
+    const users = await User.find({}, 'username name email state role')
+      .skip((page - 1) * perPage)
+      .limit(perPage)
+      .sort({ createAt: sortOption });
+    // No. 계산: 역순(내림차순)일 때는 큰 번호가 위, 오름차순일 때는 작은 번호가 위
+    let startNo;
+    if (sort === 'desc') {
+      startNo = total - (page - 1) * perPage;
+    } else {
+      startNo = (page - 1) * perPage + 1;
+    }
+    res.render('user', {
+      title: '회원 목록',
+      users,
+      total,
+      page,
+      perPage,
+      pageCount: Math.ceil(total / perPage),
+      sort,
+      startNo,
+    });
+  } catch (err) {
+    console.error('회원 목록 조회 오류:', err);
+    res.status(500).send('회원 목록 조회 중 오류가 발생했습니다.');
+  }
+};
+
+// 사용자 상세
+exports.userDetail = async (req, res) => {
+  try {
+    const user = await User.findOne({ username: req.query.id });
+    if (!user) {
+      return res.status(404).send('사용자를 찾을 수 없습니다.');
+    }
+    res.render('userView', {
+      title: '회원정보 보기',
+      user,
+      session: req.session,
+    });
+  } catch (err) {
+    console.error('회원정보 조회 오류:', err);
+    res.status(500).send('회원정보 조회 중 오류가 발생했습니다.');
+  }
+};
+
+// 이름/전화번호 수정
+exports.editInfo = async (req, res) => {
+  try {
+    const { username, name, phone } = req.body;
+    if (!username || !name) return res.json({ success: false, message: '필수 정보 누락' });
+    const user = await User.findOneAndUpdate({ username }, { name, phone, updateAt: new Date() }, { new: true });
+    if (!user) return res.json({ success: false, message: '사용자 없음' });
+    res.json({ success: true });
+  } catch (err) {
+    console.error('회원정보 수정 오류:', err);
+    res.json({ success: false, message: '서버 오류' });
+  }
+};
+
+// 비밀번호 변경 (admin: 바로 변경, general: 기존 비밀번호 확인)
+exports.changePassword = async (req, res) => {
+  try {
+    const { username, newPassword, currentPassword } = req.body;
+    if (!username || !newPassword) return res.json({ success: false, message: '필수 정보 누락' });
+    const user = await User.findOne({ username });
+    if (!user) return res.json({ success: false, message: '사용자 없음' });
+    // admin은 currentPassword 없이 변경, general은 currentPassword 확인 필요
+    if (req.session.role === 'admin') {
+      // 바로 변경
+      user.password = await bcrypt.hash(newPassword, 10);
+      user.tempPassword = undefined;
+      user.updateAt = new Date();
+      await user.save();
+      return res.json({ success: true });
+    } else {
+      // 기존 비밀번호 확인
+      if (!currentPassword) return res.json({ success: false, message: '기존 비밀번호를 입력하세요.' });
+      const match = await bcrypt.compare(currentPassword, user.password);
+      if (!match) return res.json({ success: false, message: '기존 비밀번호가 일치하지 않습니다.' });
+      user.password = await bcrypt.hash(newPassword, 10);
+      user.tempPassword = undefined;
+      user.updateAt = new Date();
+      await user.save();
+      return res.json({ success: true });
+    }
+  } catch (err) {
+    console.error('비밀번호 변경 오류:', err);
+    res.json({ success: false, message: '서버 오류' });
   }
 }; 

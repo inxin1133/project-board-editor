@@ -1,0 +1,17 @@
+{% extends "layout_main.html" %}
+{% block title %}회원정보 수정{% endblock %}
+{% block content %}
+<h2 class="mb-4">회원정보 수정</h2>
+<form>
+  <div class="mb-3">
+    <label for="inputName" class="form-label">이름</label>
+    <input type="text" class="form-control" id="inputName" value="홍길동">
+  </div>
+  <div class="mb-3">
+    <label for="inputEmail" class="form-label">이메일</label>
+    <input type="email" class="form-control" id="inputEmail" value="user01@email.com">
+  </div>
+  <button type="submit" class="btn btn-primary">저장</button>
+  <a href="/user/view?id=user01" class="btn btn-secondary">취소</a>
+</form>
+{% endblock %} 

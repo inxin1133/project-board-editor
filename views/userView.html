@@ -1,0 +1,229 @@
+{% extends "layout_main.html" %}
+{% block title %}회원정보 보기{% endblock %}
+{% block content %}
+<a href="javascript:history.back()" class="btn btn-secondary mb-3">← 뒤로가기</a>
+<h2 class="mb-4">회원정보</h2> 
+<div class="card">
+  <div class="card-body">
+    <p class="card-text">접속세션정보 :{{ session.role }}</p>
+    <h5 class="card-title">{{ user.name }} ({{ user.username }})</h5>
+    <p class="card-text">이메일: {{ user.email or '-' }}</p>
+    <p class="card-text">전화번호: {{ user.phone or '-' }}</p>
+    <p class="card-text">2차 인증: {% if user.is2faVerified %}완료{% else %}미완료{% endif %}</p>
+    <p class="card-text">
+      상태:
+      <select id="stateSelect" class="form-select d-inline w-auto" style="width:auto;display:inline-block;" data-username="{{ user.username }}" data-original="{{ user.state }}">
+        <option value="temp" {% if user.state == 'temp' %}selected{% endif %}>temp</option>
+        <option value="use" {% if user.state == 'use' %}selected{% endif %}>use</option>
+      </select>
+    </p>
+    <p class="card-text">
+      권한:
+      <select id="roleSelect" class="form-select d-inline w-auto" style="width:auto;display:inline-block;" data-username="{{ user.username }}" data-original="{{ user.role }}">
+        <option value="general" {% if user.role == 'general' %}selected{% endif %}>general</option>
+        <option value="admin" {% if user.role == 'admin' %}selected{% endif %}>admin</option>
+      </select>
+    </p>
+    <p class="card-text">가입일: {% if user.createAt %}{{ user.createAt | date('D h:mm') }}{% else %}-{% endif %}</p>
+    <p class="card-text">수정일: {% if user.updateAt %}{{ user.updateAt | date('D h:mm') }}{% else %}-{% endif %}</p>
+    <a href="#" class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#editInfoModal">수정</a>
+    <button type="button" class="btn btn-secondary" data-bs-toggle="modal" data-bs-target="#pwChangeModal">비밀번호 변경</button>
+    <a href="/user" class="btn btn-secondary">목록</a>
+  </div>
+</div>
+
+<!-- 이름/전화번호 수정 모달 -->
+<div class="modal fade" id="editInfoModal" tabindex="-1" aria-labelledby="editInfoModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <form id="editInfoForm">
+        <div class="modal-header">
+          <h5 class="modal-title" id="editInfoModalLabel">회원정보 수정</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label for="editName" class="form-label">이름</label>
+            <input type="text" class="form-control" id="editName" name="name" value="{{ user.name }}" required>
+          </div>
+          <div class="mb-3">
+            <label for="editPhone" class="form-label">전화번호</label>
+            <input type="text" class="form-control" id="editPhone" name="phone" value="{{ user.phone }}">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">취소</button>
+          <button type="submit" class="btn btn-primary">저장</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- 비밀번호 변경 모달 -->
+<div class="modal fade" id="pwChangeModal" tabindex="-1" aria-labelledby="pwChangeModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <form id="pwChangeForm">
+        <div class="modal-header">
+          <h5 class="modal-title" id="pwChangeModalLabel">비밀번호 변경</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          {% if session.role == 'admin' %}
+          <div class="mb-3">
+            <label for="newPassword" class="form-label">변경할 비밀번호</label>
+            <input type="password" class="form-control" id="newPassword" name="newPassword" required>
+          </div>
+          <div class="mb-3">
+            <label for="confirmPassword" class="form-label">비밀번호 확인</label>
+            <input type="password" class="form-control" id="confirmPassword" name="confirmPassword" required>
+          </div>
+          {% else %}
+          <div class="mb-3">
+            <label for="currentPassword" class="form-label">기존 비밀번호 확인</label>
+            <input type="password" class="form-control" id="currentPassword" name="currentPassword" required>
+          </div>
+          <div class="mb-3">
+            <label for="newPassword" class="form-label">변경할 비밀번호</label>
+            <input type="password" class="form-control" id="newPassword" name="newPassword" required>
+          </div>
+          <div class="mb-3">
+            <label for="confirmPassword" class="form-label">비밀번호 확인</label>
+            <input type="password" class="form-control" id="confirmPassword" name="confirmPassword" required>
+          </div>
+          {% endif %}
+          <div id="pwChangeError" class="text-danger mb-2" style="display:none;"></div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">취소</button>
+          <button type="submit" class="btn btn-primary">변경하기</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+  document.getElementById('stateSelect').addEventListener('change', function() {
+    const username = this.getAttribute('data-username');
+    const newState = this.value;
+    if (confirm(`현재 회원의 상태를 ${newState}으로 변경합니다.`)) {
+      fetch(`/user/state`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, state: newState })
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+          alert('상태가 변경되었습니다.');
+        } else {
+          alert('상태 변경 실패: ' + (data.message || '오류'));
+        }
+      });
+    } else {
+      // 변경 취소 시 원래 값으로 복원
+      this.value = this.getAttribute('data-original');
+    }
+  });
+  document.getElementById('roleSelect').addEventListener('change', function() {
+    const username = this.getAttribute('data-username');
+    const newRole = this.value;
+    if (confirm(`현재 회원의 권한을 ${newRole}으로 변경합니다.`)) {
+      fetch(`/user/role`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, role: newRole })
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+          alert('권한이 변경되었습니다.');
+        } else {
+          alert('권한 변경 실패: ' + (data.message || '오류'));
+        }
+      });
+    } else {
+      // 변경 취소 시 원래 값으로 복원
+      this.value = this.getAttribute('data-original');
+    }
+  });
+  // 이름/전화번호 수정
+  document.getElementById('editInfoForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const name = document.getElementById('editName').value;
+    const phone = document.getElementById('editPhone').value;
+    fetch('/user/edit-info', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username: '{{ user.username }}', name, phone })
+    })
+    .then(res => res.json())
+    .then(data => {
+      if (data.success) {
+        alert('회원정보가 변경되었습니다.');
+        location.reload();
+      } else {
+        alert('회원정보 변경 실패: ' + (data.message || '오류'));
+      }
+    });
+  });
+  // 비밀번호 변경
+  var userRole = '{{ session.role }}';
+  document.getElementById('pwChangeForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const errorDiv = document.getElementById('pwChangeError');
+    errorDiv.style.display = 'none';
+    if (userRole === 'admin') {
+      const newPassword = document.getElementById('newPassword').value;
+      const confirmPassword = document.getElementById('confirmPassword').value;
+      if (newPassword !== confirmPassword) {
+        errorDiv.textContent = '비밀번호가 일치하지 않습니다.';
+        errorDiv.style.display = 'block';
+        return;
+      }
+      fetch('/user/change-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: '{{ user.username }}', newPassword })
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+          alert('비밀번호가 변경되었습니다.');
+          location.reload();
+        } else {
+          errorDiv.textContent = data.message || '비밀번호 변경 실패';
+          errorDiv.style.display = 'block';
+        }
+      });
+    } else {
+      const currentPassword = document.getElementById('currentPassword').value;
+      const newPassword = document.getElementById('newPassword').value;
+      const confirmPassword = document.getElementById('confirmPassword').value;
+      if (newPassword !== confirmPassword) {
+        errorDiv.textContent = '비밀번호가 일치하지 않습니다.';
+        errorDiv.style.display = 'block';
+        return;
+      }
+      fetch('/user/change-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: '{{ user.username }}', currentPassword, newPassword })
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+          alert('비밀번호가 변경되었습니다.');
+          location.reload();
+        } else {
+          errorDiv.textContent = data.message || '비밀번호 변경 실패';
+          errorDiv.style.display = 'block';
+        }
+      });
+    }
+  });
+</script>
+{% endblock %} 
