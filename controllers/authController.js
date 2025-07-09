@@ -1,6 +1,9 @@
 const bcrypt = require('bcrypt');
 const mongoose = require('mongoose');
 const nodemailer = require('nodemailer');
+const XLSX = require('xlsx');
+const path = require('path');
+const fs = require('fs');
 
 const dbConnect = process.env.MONGODB_CONNECT;
 
@@ -304,6 +307,20 @@ exports.updateUserRole = async (req, res) => {
   }
 };
 
+// 2차 인증 상태 변경
+exports.update2faStatus = async (req, res) => {
+  try {
+    const { username, is2faVerified } = req.body;
+    if (typeof is2faVerified === 'undefined' || !username) return res.json({ success: false, message: '필수 정보 누락' });
+    const user = await User.findOneAndUpdate({ username }, { is2faVerified, updateAt: new Date() }, { new: true });
+    if (!user) return res.json({ success: false, message: '사용자 없음' });
+    res.json({ success: true });
+  } catch (err) {
+    console.error('2차 인증 상태 변경 오류:', err);
+    res.json({ success: false, message: '서버 오류' });
+  }
+};
+
 // 사용자 목록 (pagination)
 exports.userList = async (req, res) => {
   try {
@@ -400,5 +417,75 @@ exports.changePassword = async (req, res) => {
   } catch (err) {
     console.error('비밀번호 변경 오류:', err);
     res.json({ success: false, message: '서버 오류' });
+  }
+};
+
+// 엑셀 양식 다운로드
+exports.downloadExcelTemplate = (req, res) => {
+  const ws = XLSX.utils.aoa_to_sheet([
+    ['username', 'name', 'email', 'phone', 'role', 'state'],
+    ['user01', '홍길동', 'user01@email.com', '010-1234-5678', 'general', 'use'],
+    ['user02', '김철수', 'user02@email.com', '010-2345-6789', 'admin', 'temp'],
+  ]);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Users');
+  const filePath = path.join(__dirname, '../uploads/users_template.xlsx');
+  XLSX.writeFile(wb, filePath);
+  res.download(filePath, 'users_template.xlsx', err => {
+    if (err) console.error('엑셀 양식 다운로드 오류:', err);
+    // 다운로드 후 임시 파일 삭제
+    fs.unlink(filePath, () => {});
+  });
+};
+
+// 엑셀 업로드 (회원 일괄 등록/수정)
+exports.uploadExcel = async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).send('엑셀 파일을 업로드하세요.');
+    const workbook = XLSX.readFile(req.file.path);
+    const sheet = workbook.Sheets[workbook.SheetNames[0]];
+    const rows = XLSX.utils.sheet_to_json(sheet, { defval: '' });
+    let success = 0, fail = 0, errors = [];
+    for (const row of rows) {
+      if (!row.username || !row.name || !row.email) {
+        fail++;
+        errors.push(`${row.username || '누락'}: 필수값 누락`);
+        continue;
+      }
+      try {
+        await User.findOneAndUpdate(
+          { username: row.username },
+          {
+            username: row.username,
+            name: row.name,
+            email: row.email,
+            phone: row.phone,
+            role: row.role || 'general',
+            state: row.state || 'temp',
+            updateAt: new Date(),
+          },
+          { upsert: true, new: true }
+        );
+        success++;
+      } catch (e) {
+        fail++;
+        errors.push(`${row.username}: DB 오류`);
+      }
+    }
+    fs.unlink(req.file.path, () => {});
+    res.render('user', {
+      title: '회원 목록',
+      users: await User.find({}, 'username name email state role'),
+      total: await User.countDocuments(),
+      page: 1,
+      perPage: 10,
+      pageCount: 1,
+      sort: 'desc',
+      startNo: await User.countDocuments(),
+      uploadResult: { success, fail, errors },
+    });
+  } catch (err) {
+    console.error('엑셀 업로드 오류:', err);
+    res.status(500).send('엑셀 업로드 중 오류가 발생했습니다.');
   }
 }; 

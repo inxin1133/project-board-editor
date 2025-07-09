@@ -9,7 +9,12 @@
     <h5 class="card-title">{{ user.name }} ({{ user.username }})</h5>
     <p class="card-text">이메일: {{ user.email or '-' }}</p>
     <p class="card-text">전화번호: {{ user.phone or '-' }}</p>
-    <p class="card-text">2차 인증: {% if user.is2faVerified %}완료{% else %}미완료{% endif %}</p>
+    <p class="card-text">2차 인증:
+      <select id="is2faSelect" class="form-select d-inline w-auto" style="width:auto;display:inline-block;" data-username="{{ user.username }}" data-original="{{ user.is2faVerified }}">
+        <option value="false" {% if not user.is2faVerified %}selected{% endif %}>미인증</option>
+        <option value="true" {% if user.is2faVerified %}selected{% endif %}>인증</option>
+      </select>
+    </p>
     <p class="card-text">
       상태:
       <select id="stateSelect" class="form-select d-inline w-auto" style="width:auto;display:inline-block;" data-username="{{ user.username }}" data-original="{{ user.state }}">
@@ -148,6 +153,28 @@
     } else {
       // 변경 취소 시 원래 값으로 복원
       this.value = this.getAttribute('data-original');
+    }
+  });
+  document.getElementById('is2faSelect').addEventListener('change', function() {
+    const username = this.getAttribute('data-username');
+    const newVal = this.value === 'true';
+    if (confirm(`현재 회원의 인증 상태를 ${this.value === 'true' ? '인증' : '미인증'}으로 변경합니다.`)) {
+      fetch(`/user/2fa`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, is2faVerified: newVal })
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+          alert('2차 인증 상태가 변경되었습니다.');
+        } else {
+          alert('2차 인증 상태 변경 실패: ' + (data.message || '오류'));
+        }
+      });
+    } else {
+      // 변경 취소 시 원래 값으로 복원
+      this.value = this.getAttribute('data-original') === 'true' ? 'true' : 'false';
     }
   });
   // 이름/전화번호 수정

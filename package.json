@@ -21,8 +21,10 @@
     "lucide": "^0.525.0",
     "luxon": "^3.6.1",
     "mongoose": "^8.16.1",
+    "multer": "^2.0.1",
     "nodemailer": "^7.0.4",
-    "nunjucks": "^3.2.4"
+    "nunjucks": "^3.2.4",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "nodemon": "^3.1.10"

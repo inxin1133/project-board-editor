@@ -15,8 +15,22 @@
       <input type="hidden" name="page" value="1">
     </form>
   </div>
-  <div></div>
+  <div>
+    <a href="/user/excel-template" class="btn btn-outline-success btn-sm me-2">엑셀 양식 다운로드</a>
+    <form method="post" action="/user/upload-excel" enctype="multipart/form-data" class="d-inline">
+      <input type="file" name="excelFile" accept=".xlsx,.xls" required style="display:inline-block;width:auto;">
+      <button type="submit" class="btn btn-outline-primary btn-sm">엑셀 업로드</button>
+    </form>
+  </div>
 </div>
+{% if uploadResult %}
+<div class="alert alert-info mt-2">
+  업로드 결과: 성공 {{ uploadResult.success }}건, 실패 {{ uploadResult.fail }}건<br>
+  {% if uploadResult.errors.length %}
+    오류: {{ uploadResult.errors | join(', ') }}
+  {% endif %}
+</div>
+{% endif %}
 <table class="table table-hover">
   <thead class="table-light">
     <tr>
