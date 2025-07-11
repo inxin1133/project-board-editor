@@ -50,10 +50,12 @@ app.set('view engine', 'html');
 const indexRouter = require('./routes/index');
 const userRouter = require('./routes/user');
 const boardRouter = require('./routes/board');
+const commentRouter = require('./routes/comment');
 
 app.use('/', indexRouter);
 app.use('/user', userRouter);
 app.use('/board', boardRouter);
+app.use('/comment', commentRouter);
 
 app.listen(PORT, () => {
   console.log(`Server is running on http://localhost:${PORT}`);

@@ -5,12 +5,151 @@
 <div class="card mb-3">
   <div class="card-body">
     <h5 class="card-title">{{ board.title }}</h5>
+    <div class="mb-2">
+      <span class="me-3">
+        <i class="lucide lucide-thumbs-up" style="vertical-align:middle;"></i>
+        <span class="fw-bold">{{ board.likes }}</span> 추천
+      </span>
+      <span>
+        <i class="lucide lucide-eye" style="vertical-align:middle;"></i>
+        <span class="fw-bold">{{ board.views }}</span> 조회
+      </span>
+      {% if board.tags and board.tags.length %}
+      <span class="ms-3">
+        {% for tag in board.tags %}
+          <span class="badge bg-secondary">#{{ tag }}</span>
+        {% endfor %}
+      </span>
+      {% endif %}
+    </div>
     <h6 class="card-subtitle mb-2 text-muted">{{ board.author.name or board.author.username }} | {{ board.createdAt|date('Y-m-d') }}</h6>
     <p class="card-text">{{ board.content }}</p>
+    <div class="mb-3">
+      <button id="likeBtn" class="btn btn-outline-primary btn-sm" type="button" {% if not session.userId %}disabled{% endif %}>
+        <i class="lucide lucide-thumbs-up" style="vertical-align:middle;"></i>
+        <span id="likeBtnText">{% if liked %}추천 취소{% else %}추천{% endif %}</span>
+        <span id="likeCount" class="ms-1">{{ board.likes }}</span>
+      </button>
+    </div>
     {% if session.userId == board.author._id or session.role == 'admin' %}
     <a href="/board/edit?id={{ board._id }}" class="btn btn-warning">수정</a>
+    <button id="deleteBtn" class="btn btn-danger ms-2" type="button">삭제</button>
     {% endif %}
     <a href="/board" class="btn btn-secondary">목록</a>
   </div>
 </div>
+<!-- 댓글/대댓글 영역 -->
+<div class="mt-5">
+  <h5>댓글</h5>
+  <!-- 댓글 입력 폼 -->
+  <form id="commentForm" class="mb-3">
+    <input type="hidden" name="parent" id="commentParentId">
+    <div class="mb-2">
+      <textarea class="form-control" name="content" id="commentContent" rows="2" placeholder="댓글을 입력하세요" required></textarea>
+    </div>
+    <button type="submit" class="btn btn-primary btn-sm">댓글 등록</button>
+    <button type="button" class="btn btn-secondary btn-sm d-none" id="cancelReplyBtn">취소</button>
+  </form>
+  <!-- 댓글 목록 -->
+  <div id="comments">
+    {% for comment in comments %}
+      <div class="mb-2" style="margin-left:{{ comment.depth * 32 }}px;">
+        <div class="d-flex align-items-center">
+          <span class="fw-bold me-2">{{ comment.authorName }}</span>
+          <span class="text-muted small me-2">{{ comment.createdAt|date('Y-m-d H:i') }}</span>
+          {% if session.userId == comment.authorId or session.role == 'admin' %}
+            <button class="btn btn-link btn-sm p-0 me-1 edit-comment-btn" data-id="{{ comment._id }}">수정</button>
+            <button class="btn btn-link btn-sm p-0 text-danger delete-comment-btn" data-id="{{ comment._id }}">삭제</button>
+          {% endif %}
+          <button class="btn btn-link btn-sm p-0 reply-comment-btn" data-id="{{ comment._id }}">답글</button>
+        </div>
+        <div class="comment-content" id="comment-content-{{ comment._id }}">{{ comment.content }}</div>
+      </div>
+    {% else %}
+      <div class="text-muted">댓글이 없습니다.</div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script src="https://unpkg.com/lucide@latest"></script>
+<script>lucide.createIcons();</script>
+<script>
+  document.getElementById('likeBtn')?.addEventListener('click', async function() {
+    const btn = this;
+    btn.disabled = true;
+    const res = await fetch('/board/like', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: '{{ board._id }}' })
+    });
+    const data = await res.json();
+    if (data.success) {
+      document.getElementById('likeCount').textContent = data.likes;
+      document.getElementById('likeBtnText').textContent = data.liked ? '추천 취소' : '추천';
+      btn.classList.toggle('btn-primary', data.liked);
+      btn.classList.toggle('btn-outline-primary', !data.liked);
+    } else {
+      alert(data.message || '오류');
+    }
+    btn.disabled = false;
+  });
+  document.getElementById('deleteBtn')?.addEventListener('click', async function() {
+    if (!confirm('정말 삭제하시겠습니까?')) return;
+    const res = await fetch('/board/delete', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: '{{ board._id }}' })
+    });
+    const data = await res.json();
+    if (data.success) {
+      alert('삭제되었습니다.');
+      location.href = '/board';
+    } else {
+      alert(data.message || '삭제 실패');
+    }
+  });
+// 댓글/대댓글 입력, 수정, 삭제, 답글 UI 처리 (AJAX)
+let replyParentId = null;
+document.querySelectorAll('.reply-comment-btn').forEach(btn => {
+  btn.addEventListener('click', function() {
+    replyParentId = this.dataset.id;
+    document.getElementById('commentParentId').value = replyParentId;
+    document.getElementById('commentContent').focus();
+    document.getElementById('cancelReplyBtn').classList.remove('d-none');
+  });
+});
+document.getElementById('cancelReplyBtn')?.addEventListener('click', function() {
+  replyParentId = null;
+  document.getElementById('commentParentId').value = '';
+  this.classList.add('d-none');
+});
+document.getElementById('commentForm')?.addEventListener('submit', async function(e) {
+  e.preventDefault();
+  const content = document.getElementById('commentContent').value.trim();
+  const parent = document.getElementById('commentParentId').value;
+  if (!content) return;
+  const res = await fetch('/comment/write', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ board: '{{ board._id }}', content, parent })
+  });
+  const data = await res.json();
+  if (data.success) location.reload();
+  else alert(data.message || '댓글 등록 실패');
+});
+document.querySelectorAll('.delete-comment-btn').forEach(btn => {
+  btn.addEventListener('click', async function() {
+    if (!confirm('댓글을 삭제하시겠습니까?')) return;
+    const res = await fetch('/comment/delete', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: this.dataset.id })
+    });
+    const data = await res.json();
+    if (data.success) location.reload();
+    else alert(data.message || '삭제 실패');
+  });
+});
+</script>
 {% endblock %} 

@@ -39,7 +39,7 @@ router.get('/home', (req, res) => {
   if (!req.session.userId) {
     return res.redirect('/');
   }
-  res.render('home', { title: '홈', name: req.session.name });
+  res.render('home', { title: '홈', name: req.session.name, currentPath: '/home' });
 });
 
 router.get('/logout', (req, res) => {

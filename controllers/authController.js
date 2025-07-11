@@ -281,6 +281,7 @@ exports.userList = async (req, res) => {
       pageCount: Math.ceil(total / perPage),
       sort,
       startNo,
+      currentPath: '/user'
     });
   } catch (err) {
     console.error('회원 목록 조회 오류:', err);
