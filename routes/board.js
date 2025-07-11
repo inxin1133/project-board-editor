@@ -1,18 +1,12 @@
 const express = require('express');
 const router = express.Router();
+const boardController = require('../controllers/boardController');
 
-// 게시판 관련 라우트
-router.get('/', (req, res) => {
-  res.render('board', { title: '게시판 목록' });
-});
-router.get('/read', (req, res) => {
-  res.render('boardRead', { title: '게시글 읽기' });
-});
-router.get('/write', (req, res) => {
-  res.render('boardWrite', { title: '게시글 작성' });
-});
-router.get('/edit', (req, res) => {
-  res.render('boardEdit', { title: '게시글 수정' });
-});
+router.get('/', boardController.list);
+router.get('/read', boardController.read);
+router.get('/write', boardController.writeForm);
+router.post('/write', boardController.create);
+router.get('/edit', boardController.editForm);
+router.post('/edit', boardController.update);
 
 module.exports = router; 

@@ -2,14 +2,22 @@
 {% block title %}게시글 수정{% endblock %}
 {% block content %}
 <h2 class="mb-4">게시글 수정</h2>
-<form>
+<form action="/board/edit?id={{ board._id }}" method="post">
+  <div class="mb-3">
+    <label for="inputBoardType" class="form-label">게시판 선택</label>
+    <select class="form-select" id="inputBoardType" name="boardType" required>
+      <option value="free" {% if board.boardType=='free' %}selected{% endif %}>자유글</option>
+      <option value="info" {% if board.boardType=='info' %}selected{% endif %}>정보글</option>
+      <option value="qna" {% if board.boardType=='qna' %}selected{% endif %}>Q&amp;A</option>
+    </select>
+  </div>
   <div class="mb-3">
     <label for="inputTitle" class="form-label">제목</label>
-    <input type="text" class="form-control" id="inputTitle" value="첫 번째 게시글">
+    <input type="text" class="form-control" id="inputTitle" name="title" value="{{ board.title }}" required>
   </div>
   <div class="mb-3">
     <label for="inputContent" class="form-label">내용</label>
-    <textarea class="form-control" id="inputContent" rows="6">이것은 첫 번째 게시글의 내용입니다.</textarea>
+    <textarea class="form-control" id="inputContent" name="content" rows="6" required>{{ board.content }}</textarea>
   </div>
   <button type="submit" class="btn btn-primary">저장</button>
   <a href="/board" class="btn btn-secondary">취소</a>

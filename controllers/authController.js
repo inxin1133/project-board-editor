@@ -1,11 +1,14 @@
-const bcrypt = require('bcrypt');
-const mongoose = require('mongoose');
-const nodemailer = require('nodemailer');
-const XLSX = require('xlsx');
-const path = require('path');
-const fs = require('fs');
+const bcrypt = require('bcrypt'); // 비밀번호 해싱
+const mongoose = require('mongoose'); // MongoDB 연결
+const nodemailer = require('nodemailer'); // 이메일 전송
+const XLSX = require('xlsx'); // 엑셀 파일 처리
+const path = require('path'); // 경로 처리
+const fs = require('fs'); // 파일 시스템 처리
 
-const dbConnect = process.env.MONGODB_CONNECT;
+const authService = require('../services/authService'); // 인증 서비스
+const User = require('../schemas/userSchema'); // 사용자 스키마 
+
+const dbConnect = process.env.MONGODB_CONNECT; // MongoDB 연결 문자열
 
 // MongoDB 연결
 mongoose.connect( dbConnect, {
@@ -13,23 +16,6 @@ mongoose.connect( dbConnect, {
   useUnifiedTopology: true,
   dbName: 'projectBoard',
 });
-
-// User 스키마
-const userSchema = new mongoose.Schema({
-  username: String,
-  password: String,
-  email: String,
-  name: String,
-  phone: String,
-  is2faVerified: { type: Boolean, default: false },
-  tempPassword: String,
-  state: { type: String, default: 'temp' },
-  role: { type: String, default: 'general' },
-  createAt: { type: Date, default: Date.now },
-  updateAt: { type: Date },
-  deleteAt: { type: Date },
-});
-const User = mongoose.model('User', userSchema, 'users'); // model 구성 : 모델명, 스키마, 컬렉션명
 
 // 이메일 전송기
 const transporter = nodemailer.createTransport({
@@ -50,43 +36,13 @@ exports.signup = async (req, res) => {
     if (password !== password2) {
       return res.status(400).send('비밀번호가 일치하지 않습니다.');
     }
-    const existing = await User.findOne({ $or: [{ username }, { email }] });
-    if (existing) {
-      // 이미 존재하는 계정의 createAt을 현재시간으로 업데이트
-      existing.createAt = new Date();
-      await existing.save();
-      return res.status(400).send('이미 존재하는 아이디 또는 이메일입니다.');
-    }
-    // 2차 인증 코드 생성
-    const code = Math.floor(100000 + Math.random() * 900000).toString();
-    // 이메일 발송 먼저 시도
-    await transporter.sendMail({
-      from: process.env.EMAIL_USER,
-      to: email,
-      subject: '[ProjectBoard] 회원가입 2차 인증코드',
-      text: `인증코드: ${code}`,
-    });
-    // 이메일 발송 성공 시 DB 저장
-    const hash = await bcrypt.hash(password, 10);
-    const user = await User.create({
-      username,
-      password: hash,
-      email,
-      name,
-      phone,
-      is2faVerified: false,
-      state: 'temp',
-      role: 'general',
-      createAt: new Date(),
-    });
-    // 2차 인증 코드 세션 저장
+    const { user, code } = await authService.signup({ username, password, email, name, phone });
     req.session.signupUserId = user._id;
     req.session.signup2faCode = code;
     req.session.signup2faEmail = email;
     res.redirect('/signup2fa');
   } catch (err) {
-    console.error('회원가입 오류:', err);
-    res.status(500).send('회원가입 중 오류가 발생했습니다. 관리자에게 문의하세요.');
+    res.status(400).send(err.message || '회원가입 중 오류가 발생했습니다.');
   }
 };
 
@@ -98,65 +54,42 @@ exports.verify2fa = async (req, res) => {
       return res.status(400).send('세션이 만료되었습니다. 처음부터 다시 시도하세요.');
     }
     if (code !== req.session.signup2faCode) {
-      // 인증 실패 시 안내 메시지
       return res.render('signup2fa', { title: '2차 인증', message: '인증코드가 올바르지 않습니다. 다시 입력해 주세요.' });
     }
-    // 인증 성공: 사용자 2fa 완료 처리
-    const user = await User.findByIdAndUpdate(req.session.signupUserId, { is2faVerified: true }, { new: true });
-    // 세션 정리
+    const user = await authService.verify2fa(req.session.signupUserId);
     delete req.session.signupUserId;
     delete req.session.signup2faCode;
     delete req.session.signup2faEmail;
     if (user.state === 'temp') {
-      // 승인 대기 계정: 가입 완료 안내 화면으로 이동
       return res.render('signupFinish');
     } else if (user.state === 'use') {
-      // 승인된 계정: 자동 로그인
       req.session.userId = user._id;
       req.session.username = user.username;
       req.session.name = user.name;
       return res.redirect('/home');
     } else {
-      // 기타 상태: 가입 완료 안내 화면으로 이동
       return res.render('signupFinish');
     }
   } catch (err) {
-    console.error(err);
     res.status(500).send('2차 인증 처리 중 오류가 발생했습니다.');
   }
 };
 
+// 로그인
 exports.login = async (req, res) => {
   try {
     const { username, password } = req.body;
-    const user = await User.findOne({ username });
-    if (!user) {
-      return res.status(400).send('존재하지 않는 아이디입니다.');
-    }
-    const match = await bcrypt.compare(password, user.password);
-    if (!match) {
-      return res.status(400).send('비밀번호가 일치하지 않습니다.');
-    }
+    const user = await authService.login({ username, password });
     if (!user.is2faVerified) {
-      // 2차 인증 미완료: 인증코드 재생성 및 이메일 발송
-      const code = Math.floor(100000 + Math.random() * 900000).toString();
+      const code = await authService.send2faCode(user);
       req.session.signupUserId = user._id;
       req.session.signup2faCode = code;
       req.session.signup2faEmail = user.email;
-      await transporter.sendMail({
-        from: process.env.EMAIL_USER,
-        to: user.email,
-        subject: '[ProjectBoard] 2차 인증코드 재발송',
-        text: `인증코드: ${code}`,
-      });
-      // 인증번호 입력화면으로 이동, 알림 메시지 전달
       return res.render('signup2fa', { title: '2차 인증', message: '2차 인증이 필요합니다. 이메일로 인증코드를 확인하세요.' });
     }
     if (user.state === 'temp') {
-      // 승인 대기 계정: introTemp.html로 이동
       return res.render('introTemp', { message: '본 계정은 관리자의 사용 승인이 나지 않았습니다. 관리자에게 문의 바랍니다.' });
     }
-    // 로그인 성공: 세션에 사용자 정보 저장
     req.session.userId = user._id;
     req.session.username = user.username;
     req.session.name = user.name;
@@ -166,8 +99,7 @@ exports.login = async (req, res) => {
     }
     res.redirect('/home');
   } catch (err) {
-    console.error('로그인 오류:', err);
-    res.status(500).send('로그인 중 오류가 발생했습니다.');
+    res.status(400).send(err.message || '로그인 중 오류가 발생했습니다.');
   }
 };
 

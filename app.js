@@ -23,7 +23,7 @@ app.use(session({
     collectionName: 'sessions',
     dbName: 'projectBoard',
   }),
-  cookie: { maxAge: 1000 * 60 * 60 }, // 1시간
+  cookie: { maxAge: 1000 * 60 * 60 * 3 }, // 세션 만료 시간 3시간
 }));
 
 // 정적 파일 제공

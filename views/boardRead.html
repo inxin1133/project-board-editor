@@ -4,10 +4,12 @@
 <h2 class="mb-4">게시글 읽기</h2>
 <div class="card mb-3">
   <div class="card-body">
-    <h5 class="card-title">첫 번째 게시글</h5>
-    <h6 class="card-subtitle mb-2 text-muted">user01 | 2024-06-01</h6>
-    <p class="card-text">이것은 첫 번째 게시글의 내용입니다.</p>
-    <a href="/board/edit?id=1" class="btn btn-warning">수정</a>
+    <h5 class="card-title">{{ board.title }}</h5>
+    <h6 class="card-subtitle mb-2 text-muted">{{ board.author.name or board.author.username }} | {{ board.createdAt|date('Y-m-d') }}</h6>
+    <p class="card-text">{{ board.content }}</p>
+    {% if session.userId == board.author._id or session.role == 'admin' %}
+    <a href="/board/edit?id={{ board._id }}" class="btn btn-warning">수정</a>
+    {% endif %}
     <a href="/board" class="btn btn-secondary">목록</a>
   </div>
 </div>

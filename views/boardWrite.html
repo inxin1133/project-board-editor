@@ -2,14 +2,30 @@
 {% block title %}게시글 작성{% endblock %}
 {% block content %}
 <h2 class="mb-4">게시글 작성</h2>
-<form>
+<form action="/board/write" method="post">
+  <div class="mb-3">
+    <label for="inputBoardType" class="form-label">게시판 선택</label>
+    <select class="form-select" id="inputBoardType" name="boardType" required>
+      <option value="free">자유글</option>
+      <option value="info">정보글</option>
+      <option value="qna">Q&amp;A</option>
+    </select>
+  </div>
+  <div class="form-check mb-3">
+    <input class="form-check-input" type="checkbox" id="inputPinned" name="pinned" value="true">
+    <label class="form-check-label" for="inputPinned">공지(상단 고정)</label>
+  </div>
   <div class="mb-3">
     <label for="inputTitle" class="form-label">제목</label>
-    <input type="text" class="form-control" id="inputTitle" placeholder="제목 입력">
+    <input type="text" class="form-control" id="inputTitle" name="title" placeholder="제목 입력" required>
+  </div>
+  <div class="mb-3">
+    <label for="inputTags" class="form-label">태그 (쉼표로 구분)</label>
+    <input type="text" class="form-control" id="inputTags" name="tags" placeholder="예: 태그1,태그2">
   </div>
   <div class="mb-3">
     <label for="inputContent" class="form-label">내용</label>
-    <textarea class="form-control" id="inputContent" rows="6" placeholder="내용 입력"></textarea>
+    <textarea class="form-control" id="inputContent" name="content" rows="6" placeholder="내용 입력" required></textarea>
   </div>
   <button type="submit" class="btn btn-primary">등록</button>
   <a href="/board" class="btn btn-secondary">취소</a>
