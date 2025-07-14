@@ -6,14 +6,17 @@
   <div class="mb-3">
     <label for="inputId" class="form-label">아이디</label>
     <input type="text" class="form-control" id="inputId" name="username" placeholder="아이디 입력" required>
+    <div id="idCheckMsg" style="font-size:0.95em; margin-top:5px;"></div>
   </div>
   <div class="mb-3">
     <label for="inputPw" class="form-label">비밀번호</label>
     <input type="password" class="form-control" id="inputPw" name="password" placeholder="비밀번호 입력" required>
+    <div id="pwCheckMsg" style="font-size:0.95em; margin-top:5px;"></div>
   </div>
   <div class="mb-3">
     <label for="inputPw2" class="form-label">비밀번호 확인</label>
     <input type="password" class="form-control" id="inputPw2" name="password2" placeholder="비밀번호 확인" required>
+    <div id="pw2CheckMsg" style="font-size:0.95em; margin-top:5px;"></div>
   </div>
   <div class="mb-3">
     <label for="inputEmail" class="form-label">이메일</label>
@@ -46,8 +49,115 @@
 <script>
   const agreeCheck = document.getElementById('agreeCheck');
   const submitBtn = document.getElementById('submitBtn');
+  const inputId = document.getElementById('inputId');
+  const idCheckMsg = document.getElementById('idCheckMsg');
+  const inputPw = document.getElementById('inputPw');
+  const inputPw2 = document.getElementById('inputPw2');
+  const pwCheckMsg = document.getElementById('pwCheckMsg');
+  const pw2CheckMsg = document.getElementById('pw2CheckMsg');
+  const inputEmail = document.getElementById('inputEmail');
+  const signupForm = document.getElementById('signupForm');
+  let idAvailable = false;
+  let pwValid = false;
+  let pw2Valid = false;
+
+  function validatePw() {
+    const pw = inputPw.value;
+    // 8자 이상, 영문, 특수문자 포함
+    const pwRegex = /^(?=.*[A-Za-z])(?=.*[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]).{8,}$/;
+    if (pw.length === 0) {
+      pwCheckMsg.textContent = '';
+      pwValid = false;
+      return;
+    }
+    if (!pwRegex.test(pw)) {
+      pwCheckMsg.textContent = '비밀번호는 8자 이상, 영문, 특수문자를 포함해야 합니다.';
+      pwCheckMsg.style.color = 'red';
+      pwValid = false;
+    } else {
+      pwCheckMsg.textContent = '사용 가능한 비밀번호입니다.';
+      pwCheckMsg.style.color = 'green';
+      pwValid = true;
+    }
+  }
+
+  function validatePw2() {
+    const pw = inputPw.value;
+    const pw2 = inputPw2.value;
+    if (pw2.length === 0) {
+      pw2CheckMsg.textContent = '';
+      pw2Valid = false;
+      return;
+    }
+    if (pw !== pw2) {
+      pw2CheckMsg.textContent = '비밀번호가 일치하지 않습니다.';
+      pw2CheckMsg.style.color = 'red';
+      pw2Valid = false;
+    } else {
+      pw2CheckMsg.textContent = '비밀번호가 일치합니다.';
+      pw2CheckMsg.style.color = 'green';
+      pw2Valid = true;
+    }
+  }
+
   agreeCheck.addEventListener('change', function() {
-    submitBtn.disabled = !this.checked;
+    submitBtn.disabled = !this.checked || !idAvailable || !pwValid || !pw2Valid;
+  });
+
+  inputId.addEventListener('input', function() {
+    const username = this.value.trim();
+    idCheckMsg.textContent = '';
+    idAvailable = false;
+    submitBtn.disabled = true;
+    if (username.length < 3) {
+      idCheckMsg.textContent = '아이디는 3자 이상 입력하세요.';
+      idCheckMsg.style.color = 'red';
+      return;
+    }
+    fetch(`/user/check-username?username=${encodeURIComponent(username)}`)
+      .then(res => res.json())
+      .then(data => {
+        idCheckMsg.textContent = data.message;
+        if (data.available) {
+          idCheckMsg.style.color = 'green';
+          idAvailable = true;
+        } else {
+          idCheckMsg.style.color = 'red';
+          idAvailable = false;
+        }
+        submitBtn.disabled = !agreeCheck.checked || !idAvailable || !pwValid || !pw2Valid;
+      });
+  });
+
+  inputPw.addEventListener('input', function() {
+    validatePw();
+    validatePw2();
+    submitBtn.disabled = !agreeCheck.checked || !idAvailable || !pwValid || !pw2Valid;
+  });
+
+  inputPw2.addEventListener('input', function() {
+    validatePw2();
+    submitBtn.disabled = !agreeCheck.checked || !idAvailable || !pwValid || !pw2Valid;
+  });
+
+  signupForm.addEventListener('submit', async function(e) {
+    e.preventDefault();
+    submitBtn.disabled = true; // 폼 제출 시 즉시 비활성화
+    const email = inputEmail.value.trim();
+    if (!email) {
+      submitBtn.disabled = false;
+      return;
+    }
+    // 이메일 중복 체크
+    const res = await fetch(`/user/check-email?email=${encodeURIComponent(email)}`);
+    const data = await res.json();
+    if (!data.available) {
+      alert('이미 존재하는 이메일 입니다.');
+      submitBtn.disabled = false; // 실패 시 다시 활성화
+      return false;
+    }
+    // 통과 시에만 submit
+    signupForm.submit();
   });
 </script>
 {% endblock %} 

@@ -28,7 +28,7 @@
   <ul class="list-unstyled d-inline-block align-middle mb-0" id="attachmentList">
     {% for file in board.attachments %}
       <li class="d-flex align-items-center mb-1" data-id="{{ file._id }}" data-type="{{ file.mimetype }}">
-        <a href="{{ file.url }}" class="me-2 file-download-link" download>{{ file.originalname }}</a>
+        <a href="/attachment/{{ file._id }}/download" class="me-2 file-download-link" download>{{ file.originalname }}</a>
         {% if session.userId == board.author._id or session.role == 'admin' %}
           <button type="button" class="btn btn-sm btn-link text-danger p-0 ms-1 file-delete-btn" data-id="{{ file._id }}">X</button>
         {% endif %}
@@ -43,12 +43,12 @@
   </div>
 </div>
 {% endif %}
-    <h6 class="card-subtitle mb-2 text-muted">{{ board.author.name or board.author.username }} | {{ board.createdAt|date('Y-m-d') }}</h6>
+    <h6 class="card-subtitle mb-2 text-muted">{{ board.author.username or board.author.name }} | {{ board.createdAt|date('D h:mm') }}</h6>
     <p class="card-text">{{ board.content }}</p>
     {% if board.attachments and board.attachments.length %}
   <div id="imagePreviewArea" class="mb-3">
     {% for file in board.attachments %}
-      {% if file.mimetype and file.mimetype.startswith('image/') %}
+      {% if file.mimetype and file.mimetype.startswith and file.mimetype.startswith('image/') %}
         <img src="{{ file.url }}" alt="{{ file.originalname }}" class="img-fluid mb-2 d-block attachment-image" data-id="{{ file._id }}" style="max-width:300px;"/>
       {% endif %}
     {% endfor %}

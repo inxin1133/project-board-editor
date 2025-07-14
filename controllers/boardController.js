@@ -92,7 +92,7 @@ exports.create = async (req, res) => {
       const attachments = await Promise.all(req.files.map(async file => {
         const att = await Attachment.create({
           filename: file.filename,
-          originalname: file.originalname,
+          originalname: Buffer.from(file.originalname, 'latin1').toString('utf8'),
           url: '/uploads/' + file.filename,
           size: file.size,
           mimetype: file.mimetype,
@@ -153,7 +153,7 @@ exports.update = async (req, res) => {
       const attachments = await Promise.all(req.files.map(async file => {
         const att = await Attachment.create({
           filename: file.filename,
-          originalname: file.originalname,
+          originalname: Buffer.from(file.originalname, 'latin1').toString('utf8'),
           url: '/uploads/' + file.filename,
           size: file.size,
           mimetype: file.mimetype,

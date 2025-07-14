@@ -56,7 +56,9 @@ exports.getBoardList = async ({ page = 1, limit = 10, sort = 'desc', boardType, 
 };
 
 exports.getBoardById = async (id) => {
-  return await Board.findById(id).populate('author', 'username name');
+  return await Board.findById(id)
+    .populate('author', 'username name') // 작성자 정보 추가
+    .populate('attachments'); // 첨부파일 정보 추가
 };
 
 exports.updateBoard = async (id, updateData) => {
