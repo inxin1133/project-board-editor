@@ -2,7 +2,7 @@
 {% block title %}게시글 작성{% endblock %}
 {% block content %}
 <h2 class="mb-4">게시글 작성</h2>
-<form action="/board/write" method="post">
+<form action="/board/write" method="post" enctype="multipart/form-data">
   <div class="mb-3">
     <label for="inputBoardType" class="form-label">게시판 선택</label>
     <select class="form-select" id="inputBoardType" name="boardType" required>
@@ -27,7 +27,95 @@
     <label for="inputContent" class="form-label">내용</label>
     <textarea class="form-control" id="inputContent" name="content" rows="6" placeholder="내용 입력" required></textarea>
   </div>
+  <div class="mb-3">
+    <label class="form-label">첨부파일</label>
+    <div id="dropZone" class="border rounded p-3 text-center bg-light" style="cursor:pointer;">
+      <div id="dropZoneText">여기로 파일을 드래그하거나 클릭하여 첨부하세요 (최대 5개, 파일당 10MB)</div>
+      <input type="file" id="inputFiles" name="attachments" multiple style="display:none;">
+      <div id="previewList" class="mt-2 d-flex flex-wrap gap-2"></div>
+    </div>
+  </div>
   <button type="submit" class="btn btn-primary">등록</button>
   <a href="/board" class="btn btn-secondary">취소</a>
 </form>
+{% endblock %}
+{% block scripts %}
+<script>
+const dropZone = document.getElementById('dropZone');
+const inputFiles = document.getElementById('inputFiles');
+const previewList = document.getElementById('previewList');
+const MAX_FILES = 5;
+const MAX_SIZE = 10 * 1024 * 1024; // 10MB
+let fileList = [];
+
+// Drag & Drop
+['dragenter','dragover'].forEach(evt => dropZone.addEventListener(evt, e => {
+  e.preventDefault();
+  dropZone.classList.add('bg-primary', 'text-white');
+}));
+['dragleave','drop'].forEach(evt => dropZone.addEventListener(evt, e => {
+  e.preventDefault();
+  dropZone.classList.remove('bg-primary', 'text-white');
+}));
+dropZone.addEventListener('click', () => inputFiles.click());
+dropZone.addEventListener('drop', e => {
+  e.preventDefault();
+  handleFiles(e.dataTransfer.files);
+});
+inputFiles.addEventListener('change', e => {
+  handleFiles(e.target.files);
+});
+function handleFiles(files) {
+  for (let file of files) {
+    if (fileList.length >= MAX_FILES) {
+      alert('최대 5개까지 첨부할 수 있습니다.');
+      break;
+    }
+    if (file.size > MAX_SIZE) {
+      alert(file.name + '은(는) 10MB를 초과합니다.');
+      continue;
+    }
+    fileList.push(file);
+  }
+  renderPreview();
+}
+function renderPreview() {
+  previewList.innerHTML = '';
+  fileList.forEach((file, idx) => {
+    const div = document.createElement('div');
+    div.className = 'border rounded p-2 bg-white position-relative';
+    div.style.width = '120px';
+    div.style.height = '120px';
+    // 미리보기(이미지)
+    if (file.type.startsWith('image/')) {
+      const img = document.createElement('img');
+      img.src = URL.createObjectURL(file);
+      img.style.maxWidth = '100%';
+      img.style.maxHeight = '80px';
+      img.className = 'mb-1';
+      div.appendChild(img);
+    } else {
+      const icon = document.createElement('div');
+      icon.innerHTML = '<i class="lucide lucide-file"></i>';
+      div.appendChild(icon);
+    }
+    // 파일명
+    const name = document.createElement('div');
+    name.textContent = file.name;
+    name.className = 'small text-truncate';
+    div.appendChild(name);
+    // 삭제 버튼
+    const delBtn = document.createElement('button');
+    delBtn.type = 'button';
+    delBtn.className = 'btn-close position-absolute top-0 end-0';
+    delBtn.onclick = () => { fileList.splice(idx,1); renderPreview(); };
+    div.appendChild(delBtn);
+    previewList.appendChild(div);
+  });
+  // inputFiles.files 동기화
+  const dataTransfer = new DataTransfer();
+  fileList.forEach(f => dataTransfer.items.add(f));
+  inputFiles.files = dataTransfer.files;
+}
+</script>
 {% endblock %} 

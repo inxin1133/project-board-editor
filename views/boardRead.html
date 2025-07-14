@@ -22,8 +22,38 @@
       </span>
       {% endif %}
     </div>
+    {% if board.attachments and board.attachments.length %}
+<div class="mb-2">
+  <span class="fw-bold">첨부파일:</span>
+  <ul class="list-unstyled d-inline-block align-middle mb-0" id="attachmentList">
+    {% for file in board.attachments %}
+      <li class="d-flex align-items-center mb-1" data-id="{{ file._id }}" data-type="{{ file.mimetype }}">
+        <a href="{{ file.url }}" class="me-2 file-download-link" download>{{ file.originalname }}</a>
+        {% if session.userId == board.author._id or session.role == 'admin' %}
+          <button type="button" class="btn btn-sm btn-link text-danger p-0 ms-1 file-delete-btn" data-id="{{ file._id }}">X</button>
+        {% endif %}
+      </li>
+    {% endfor %}
+  </ul>
+  <div class="d-inline-block ms-2">
+    <button type="button" class="btn btn-outline-info btn-sm me-1" id="downloadAllBtn">한번에 내려받기</button>
+    {% if session.userId == board.author._id or session.role == 'admin' %}
+      <button type="button" class="btn btn-outline-danger btn-sm" id="deleteAllBtn">모두삭제</button>
+    {% endif %}
+  </div>
+</div>
+{% endif %}
     <h6 class="card-subtitle mb-2 text-muted">{{ board.author.name or board.author.username }} | {{ board.createdAt|date('Y-m-d') }}</h6>
     <p class="card-text">{{ board.content }}</p>
+    {% if board.attachments and board.attachments.length %}
+  <div id="imagePreviewArea" class="mb-3">
+    {% for file in board.attachments %}
+      {% if file.mimetype and file.mimetype.startswith('image/') %}
+        <img src="{{ file.url }}" alt="{{ file.originalname }}" class="img-fluid mb-2 d-block attachment-image" data-id="{{ file._id }}" style="max-width:300px;"/>
+      {% endif %}
+    {% endfor %}
+  </div>
+{% endif %}
     <div class="mb-3">
       <button id="likeBtn" class="btn btn-outline-primary btn-sm" type="button" {% if not session.userId %}disabled{% endif %}>
         <i class="lucide lucide-thumbs-up" style="vertical-align:middle;"></i>
@@ -150,6 +180,55 @@ document.querySelectorAll('.delete-comment-btn').forEach(btn => {
     if (data.success) location.reload();
     else alert(data.message || '삭제 실패');
   });
+});
+
+// 첨부파일 삭제/다운로드
+function removeAttachmentFromUI(fileId) {
+  // 목록에서 제거
+  const li = document.querySelector(`#attachmentList li[data-id='${fileId}']`);
+  if (li) li.remove();
+  // 이미지 미리보기 제거
+  const img = document.querySelector(`#imagePreviewArea img[data-id='${fileId}']`);
+  if (img) img.remove();
+}
+
+document.querySelectorAll('.file-delete-btn').forEach(btn => {
+  btn.addEventListener('click', async function() {
+    if (!confirm('첨부파일을 삭제하시겠습니까?')) return;
+    const fileId = this.dataset.id;
+    const res = await fetch('/attachment/delete', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: fileId })
+    });
+    const data = await res.json();
+    if (data.success) {
+      removeAttachmentFromUI(fileId);
+    } else {
+      alert(data.message || '삭제 실패');
+    }
+  });
+});
+
+document.getElementById('deleteAllBtn')?.addEventListener('click', async function() {
+  if (!confirm('첨부파일을 모두 삭제하시겠습니까?')) return;
+  const res = await fetch('/attachment/deleteAll', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ boardId: '{{ board._id }}' })
+  });
+  const data = await res.json();
+  if (data.success) {
+    // 목록, 이미지 모두 제거
+    document.getElementById('attachmentList').innerHTML = '';
+    document.getElementById('imagePreviewArea').innerHTML = '';
+  } else {
+    alert(data.message || '삭제 실패');
+  }
+});
+
+document.getElementById('downloadAllBtn')?.addEventListener('click', function() {
+  window.location.href = '/attachment/downloadAll?boardId={{ board._id }}';
 });
 </script>
 {% endblock %} 

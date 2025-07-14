@@ -51,11 +51,13 @@ const indexRouter = require('./routes/index');
 const userRouter = require('./routes/user');
 const boardRouter = require('./routes/board');
 const commentRouter = require('./routes/comment');
+const attachmentRouter = require('./routes/attachment');
 
 app.use('/', indexRouter);
 app.use('/user', userRouter);
 app.use('/board', boardRouter);
 app.use('/comment', commentRouter);
+app.use('/attachment', attachmentRouter);
 
 app.listen(PORT, () => {
   console.log(`Server is running on http://localhost:${PORT}`);

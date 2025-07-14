@@ -1,13 +1,19 @@
 const express = require('express');
 const router = express.Router();
 const boardController = require('../controllers/boardController');
+const multer = require('multer');
+const path = require('path');
+const upload = multer({
+  dest: path.join(__dirname, '../uploads'),
+  limits: { fileSize: 20 * 1024 * 1024 },
+});
 
 router.get('/', boardController.list);
 router.get('/read', boardController.read);
 router.get('/write', boardController.writeForm);
-router.post('/write', boardController.create);
+router.post('/write', upload.array('attachments'), boardController.create);
 router.get('/edit', boardController.editForm);
-router.post('/edit', boardController.update);
+router.post('/edit', upload.array('attachments'), boardController.update);
 router.post('/like', boardController.toggleLike);
 router.post('/delete', boardController.delete);
 

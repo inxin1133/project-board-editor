@@ -1,5 +1,13 @@
 const boardService = require('../services/boardService');
 const commentService = require('../services/commentService');
+const multer = require('multer');
+const path = require('path');
+const upload = multer({
+  dest: path.join(__dirname, '../uploads'),
+  limits: { fileSize: 20 * 1024 * 1024 }, // 20MB
+});
+const Attachment = require('../schemas/attachmentSchema');
+const fs = require('fs');
 
 exports.list = async (req, res) => {
   const page = parseInt(req.query.page) || 1;
@@ -78,6 +86,24 @@ exports.create = async (req, res) => {
     const { title, content, boardType, pinned, tags } = req.body;
     const author = req.session.userId;
     const tagsArr = tags ? tags.split(',').map(t => t.trim()).filter(Boolean) : [];
+    // 첨부파일 저장
+    let attachmentIds = [];
+    if (req.files && req.files.length) {
+      const attachments = await Promise.all(req.files.map(async file => {
+        const att = await Attachment.create({
+          filename: file.filename,
+          originalname: file.originalname,
+          url: '/uploads/' + file.filename,
+          size: file.size,
+          mimetype: file.mimetype,
+          uploader: author,
+          refType: 'board',
+          refId: null, // board 생성 후 업데이트
+        });
+        return att;
+      }));
+      attachmentIds = attachments.map(a => a._id);
+    }
     const board = await boardService.createBoard({
       title,
       content,
@@ -86,8 +112,12 @@ exports.create = async (req, res) => {
       pinned: pinned === 'true',
       tags: tagsArr,
       isPrivate: false,
-      attachments: []
+      attachments: attachmentIds
     });
+    // 첨부파일 refId, board 필드 업데이트
+    if (attachmentIds.length) {
+      await Attachment.updateMany({ _id: { $in: attachmentIds } }, { refId: board._id, board: board._id });
+    }
     res.redirect(`/board/read?id=${board._id}`);
   } catch (err) {
     res.status(400).send('게시글 작성 오류: ' + err.message);
@@ -97,13 +127,58 @@ exports.create = async (req, res) => {
 exports.editForm = async (req, res) => {
   const board = await boardService.getBoardById(req.query.id);
   if (!board) return res.status(404).send('게시글 없음');
+  // 첨부파일 목록 조회
+  await board.populate('attachments');
   res.render('boardEdit', { title: '게시글 수정', board, currentPath: '/board' });
 };
 
 exports.update = async (req, res) => {
   try {
-    const { title, content, boardType } = req.body;
-    await boardService.updateBoard(req.query.id, { title, content, boardType, updatedAt: new Date() });
+    const { title, content, boardType, pinned, tags, deleteAttachments } = req.body;
+    const tagsArr = tags ? tags.split(',').map(t => t.trim()).filter(Boolean) : [];
+    // 기존 첨부파일 삭제
+    if (deleteAttachments) {
+      const ids = Array.isArray(deleteAttachments) ? deleteAttachments : [deleteAttachments];
+      for (const id of ids) {
+        const att = await Attachment.findById(id);
+        if (att) {
+          try { fs.unlinkSync(path.join(__dirname, '../uploads', att.filename)); } catch(e) {}
+          await att.deleteOne();
+        }
+      }
+    }
+    // 새 첨부파일 저장
+    let newAttachmentIds = [];
+    if (req.files && req.files.length) {
+      const attachments = await Promise.all(req.files.map(async file => {
+        const att = await Attachment.create({
+          filename: file.filename,
+          originalname: file.originalname,
+          url: '/uploads/' + file.filename,
+          size: file.size,
+          mimetype: file.mimetype,
+          uploader: req.session.userId,
+          refType: 'board',
+          refId: req.query.id,
+          board: req.query.id
+        });
+        return att;
+      }));
+      newAttachmentIds = attachments.map(a => a._id);
+    }
+    // board 업데이트
+    const updateData = {
+      title,
+      content,
+      boardType,
+      pinned: !!pinned,
+      tags: tagsArr,
+      updatedAt: new Date()
+    };
+    if (newAttachmentIds.length) {
+      updateData.$push = { attachments: { $each: newAttachmentIds } };
+    }
+    await boardService.updateBoard(req.query.id, updateData);
     res.redirect(`/board/read?id=${req.query.id}`);
   } catch (err) {
     res.status(400).send('게시글 수정 오류: ' + err.message);

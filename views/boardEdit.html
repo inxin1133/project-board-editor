@@ -2,7 +2,7 @@
 {% block title %}게시글 수정{% endblock %}
 {% block content %}
 <h2 class="mb-4">게시글 수정</h2>
-<form action="/board/edit?id={{ board._id }}" method="post">
+<form action="/board/edit?id={{ board._id }}" method="post" enctype="multipart/form-data">
   <div class="mb-3">
     <label for="inputBoardType" class="form-label">게시판 선택</label>
     <select class="form-select" id="inputBoardType" name="boardType" required>
@@ -11,15 +11,57 @@
       <option value="qna" {% if board.boardType=='qna' %}selected{% endif %}>Q&amp;A</option>
     </select>
   </div>
+  <div class="form-check mb-3">
+    <input class="form-check-input" type="checkbox" id="inputPinned" name="pinned" value="true" {% if board.pinned %}checked{% endif %}>
+    <label class="form-check-label" for="inputPinned">공지(상단 고정)</label>
+  </div>
   <div class="mb-3">
     <label for="inputTitle" class="form-label">제목</label>
     <input type="text" class="form-control" id="inputTitle" name="title" value="{{ board.title }}" required>
   </div>
   <div class="mb-3">
+    <label for="inputTags" class="form-label">태그 (쉼표로 구분)</label>
+    <input type="text" class="form-control" id="inputTags" name="tags" value="{{ board.tags | join(',') }}" placeholder="예: 태그1,태그2">
+  </div>
+  <div class="mb-3">
     <label for="inputContent" class="form-label">내용</label>
     <textarea class="form-control" id="inputContent" name="content" rows="6" required>{{ board.content }}</textarea>
   </div>
+  <div class="mb-3">
+    <label for="inputFiles" class="form-label">첨부파일 추가</label>
+    <input type="file" class="form-control" id="inputFiles" name="attachments" multiple>
+  </div>
+  {% if board.attachments and board.attachments.length %}
+  <div class="mb-3">
+    <label class="form-label">첨부된 파일</label>
+    <ul class="list-group">
+      {% for file in board.attachments %}
+        <li class="list-group-item d-flex justify-content-between align-items-center">
+          <a href="{{ file.url }}" target="_blank">{{ file.originalname }}</a>
+          <button type="button" class="btn btn-sm btn-danger delete-attachment-btn" data-id="{{ file._id }}">삭제</button>
+        </li>
+      {% endfor %}
+    </ul>
+  </div>
+  {% endif %}
   <button type="submit" class="btn btn-primary">저장</button>
   <a href="/board" class="btn btn-secondary">취소</a>
 </form>
+{% endblock %}
+{% block scripts %}
+<script>
+document.querySelectorAll('.delete-attachment-btn').forEach(btn => {
+  btn.addEventListener('click', function() {
+    const id = this.dataset.id;
+    // 삭제할 첨부파일 id를 hidden input에 추가
+    let input = document.createElement('input');
+    input.type = 'hidden';
+    input.name = 'deleteAttachments';
+    input.value = id;
+    document.querySelector('form').appendChild(input);
+    // UI에서 제거
+    this.closest('li').remove();
+  });
+});
+</script>
 {% endblock %} 

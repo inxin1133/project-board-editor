@@ -19,7 +19,7 @@ const boardSchema = new mongoose.Schema({
   status: { type: String, enum: ['active', 'deleted', 'hidden'], default: 'active' },
   pinned: { type: Boolean, default: false },
   isPrivate: { type: Boolean, default: false },
-  attachments: [attachmentSchema],
+  attachments: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Attachment' }],
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date },
 });
