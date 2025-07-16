@@ -8,7 +8,7 @@
   <link rel="stylesheet" href="/style.css">
 </head>
 <body>
-  <nav class="navbar navbar-expand-lg navbar-dark bg-primary mb-4">
+  <nav class="navbar navbar-expand-lg navbar-dark bg-primary mb-0">
     <div class="container-fluid">
       <a class="navbar-brand" href="/home">Project Board</a>
       <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
@@ -17,7 +17,9 @@
       <div class="collapse navbar-collapse" id="navbarNav">
         <ul class="navbar-nav ms-auto">
           <li class="nav-item"><a class="nav-link{% if currentPath=='/home' %} active{% endif %}" href="/home">Home</a></li>
-          <li class="nav-item"><a class="nav-link{% if currentPath=='/user' %} active{% endif %}" href="/user">User</a></li>
+          {% if me.role == 'admin' %}
+            <li class="nav-item"><a class="nav-link{% if currentPath=='/user' %} active{% endif %}" href="/user">User</a></li>
+          {% endif %}
           <li class="nav-item"><a class="nav-link{% if currentPath=='/board' %} active{% endif %}" href="/board">Board</a></li>
           <li class="nav-item d-flex align-items-center ms-2 dropdown">
             <a href="#" class="d-flex align-items-center nav-link dropdown-toggle p-0 border-0 bg-transparent" id="profileDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false" style="box-shadow:none;">
@@ -28,17 +30,24 @@
             </a>
             <ul class="dropdown-menu dropdown-menu-end mt-2" aria-labelledby="profileDropdown" style="min-width:220px;">
               <li class="px-3 py-2 d-flex align-items-center" style="gap:12px;">
-                <span style="display:inline-flex;align-items:center;justify-content:center;width:50px;height:50px;border-radius:100px;background:#22c55e;">
-                  <i data-lucide="user" style="color:white;width:32px;height:32px;"></i>
+                <span style="display:inline-flex;align-items:center;justify-content:center;width:50px;height:50px;border-radius:100px;background:#22c55e;overflow:hidden;">
+                  {% if me.profileImage and me.profileImage.url %}
+                    <img src="{{ me.profileImage.url }}" alt="프로필 이미지" style="width:32px;height:32px;object-fit:cover;border-radius:100px;"/>
+                  {% else %}
+                    <i data-lucide="user" style="color:white;width:32px;height:32px;"></i>
+                  {% endif %}
                 </span>
                 <div>
-                  <div style="font-weight:bold;">{{ user.name }}</div>
-                  <div style="font-size:0.9em;color:#888;">{{ user.username }}</div>
+                  <div style="font-weight:bold;">{{ me.name }}</div>
+                  <div style="font-size:0.9em;color:#888;">{{ me.username }}</div>
+                  <div style="font-size:0.9em;color:#22c55e;min-height:1.2em;">{{ me.statusMessage or ' ' }}</div>
                 </div>
               </li>
               <li><hr class="dropdown-divider"></li>
-              <li><a class="dropdown-item" href="/userView">내 계정 정보</a></li>
-              <li><a class="dropdown-item" href="#">관리자 설정</a></li>
+              <li><a class="dropdown-item" href="/user/view?id={{ me.username }}">내 계정 정보</a></li>
+              {% if me.role == 'admin' %}
+                <li><a class="dropdown-item" href="#">관리자 설정</a></li>
+              {% endif %}
               <li><a class="dropdown-item text-danger" href="/logout">로그아웃</a></li>
             </ul>
           </li>
@@ -46,9 +55,10 @@
       </div>
     </div>
   </nav>
-  <div class="container">
+  <div class="container-fluid">
     {% block content %}{% endblock %}
   </div>
+  
 
   <!-- 비밀번호 변경 모달 -->
   <div class="modal fade" id="pwChangeModal" tabindex="-1" aria-labelledby="pwChangeModalLabel" aria-hidden="true">
@@ -101,6 +111,13 @@
     });
     document.addEventListener("DOMContentLoaded", function() {
       if (window.lucide) lucide.createIcons();
+      // 오프캔버스 열릴 때마다 아이콘 새로고침
+      var lnbOffcanvas = document.getElementById('lnbOffcanvas');
+      if (lnbOffcanvas) {
+        lnbOffcanvas.addEventListener('shown.bs.offcanvas', function () {
+          if (window.lucide) lucide.createIcons();
+        });
+      }
     });
   </script>
   {% block scripts %}{% endblock %}

@@ -5,6 +5,7 @@ const path = require('path');
 const session = require('express-session');
 const MongoStore = require('connect-mongo');
 const { DateTime } = require('luxon');
+const User = require('./schemas/userSchema');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -27,21 +28,33 @@ app.use(session({
 }));
 
 // 로그인한 사용자 정보를 모든 템플릿에서 사용 가능하게 설정
-app.use((req, res, next) => {
+app.use(async (req, res, next) => {
   if (req.session && req.session.userId) {
-    res.locals.user = {
-      name: req.session.name,
-      username: req.session.username,
-      role: req.session.role
-    };
+    try {
+      const user = await User.findById(req.session.userId).populate('profileImage');
+      if (user) {
+        res.locals.me = {
+          name: user.name,
+          username: user.username,
+          role: user.role,
+          statusMessage: user.statusMessage,
+          profileImage: user.profileImage,
+        };
+      } else {
+        res.locals.me = null;
+      }
+    } catch (e) {
+      res.locals.me = null;
+    }
   } else {
-    res.locals.user = null;
+    res.locals.me = null;
   }
   next();
 });
 
 // 정적 파일 제공
 app.use(express.static(path.join(__dirname, 'public')));
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Nunjucks 설정
 const env = nunjucks.configure('views', {

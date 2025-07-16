@@ -1,100 +1,153 @@
 {% extends "layout_main.html" %}
 {% block title %}회원 목록{% endblock %}
 {% block content %}
-<h2 class="mb-4">회원 목록</h2>
-<div class="d-flex justify-content-between align-items-center mb-2">
-  <div>
-    <form method="get" id="limitForm" class="d-inline">
-      <label for="limitSelect" class="form-label me-2">목록수</label>
-      <select name="limit" id="limitSelect" class="form-select d-inline w-auto" onchange="document.getElementById('limitForm').submit();">
-        <option value="10" {% if perPage == 10 %}selected{% endif %}>10개</option>
-        <option value="15" {% if perPage == 15 %}selected{% endif %}>15개</option>
-        <option value="20" {% if perPage == 20 %}selected{% endif %}>20개</option>
-      </select>
-      <input type="hidden" name="sort" value="{{ sort }}">
-      <input type="hidden" name="page" value="1">
-    </form>
+<!-- Offcanvas LNB (모바일/태블릿용) -->
+<div class="offcanvas offcanvas-start" tabindex="-1" id="lnbOffcanvas" aria-labelledby="lnbOffcanvasLabel">
+  <div class="offcanvas-header">
+    <h5 class="offcanvas-title" id="lnbOffcanvasLabel">메뉴</h5>
+    <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
   </div>
-  <div>
-    <a href="/user/excel-template" class="btn btn-outline-success btn-sm me-2">엑셀 양식 다운로드</a>
-    <form method="post" action="/user/upload-excel" enctype="multipart/form-data" class="d-inline">
-      <input type="file" name="excelFile" accept=".xlsx,.xls" required style="display:inline-block;width:auto;">
-      <button type="submit" class="btn btn-outline-primary btn-sm">엑셀 업로드</button>
-    </form>
+  <div class="offcanvas-body p-0">
+    {% include 'lnb.html' %} 
+    <p>test</p>
   </div>
 </div>
-{% if uploadResult %}
-<div class="alert alert-info mt-2">
-  업로드 결과: 성공 {{ uploadResult.success }}건, 실패 {{ uploadResult.fail }}건<br>
-  {% if uploadResult.errors.length %}
-    오류: {{ uploadResult.errors | join(', ') }}
-  {% endif %}
-</div>
-{% endif %}
-<div class="table-responsive">
-<table class="table table-hover">
-  <thead class="table-light">
-    <tr>
-      <th>
-        No.
-        <form method="get" id="sortForm" style="display:inline;">
+<div class="container-fluid">
+ 
+  <div class="row">
+
+    <div class="col-auto p-0 d-lg-none">
+      <button class="btn btn-primary d-lg-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#lnbOffcanvas" aria-controls="lnbOffcanvas">
+        <i data-lucide="menu" style="width:18px;height:18px;vertical-align:-3px;"></i>
+      </button>
+    </div>
+
+    <div class="col-auto p-0 d-none d-lg-block">
+      {% include 'lnb.html' %}
+    </div>
+
+    <div class="col p-3"> 
+      <h2 class="mb-4">회원 목록</h2>
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <div>
+          <form method="get" id="limitForm" class="d-inline">
+            <label for="limitSelect" class="form-label me-2">목록수</label>
+            <select name="limit" id="limitSelect" class="form-select d-inline w-auto" onchange="document.getElementById('limitForm').submit();">
+              <option value="10" {% if perPage == 10 %}selected{% endif %}>10개</option>
+              <option value="15" {% if perPage == 15 %}selected{% endif %}>15개</option>
+              <option value="20" {% if perPage == 20 %}selected{% endif %}>20개</option>
+            </select>
+            <input type="hidden" name="sort" value="{{ sort }}">
+            <input type="hidden" name="page" value="1">
+          </form>
+        </div>
+        <div>
+          <a href="/user/excel-template" class="btn btn-outline-success btn-sm me-2">엑셀 양식 다운로드</a>
+          <form method="post" action="/user/upload-excel" enctype="multipart/form-data" class="d-inline">
+            <input type="file" name="excelFile" accept=".xlsx,.xls" required style="display:inline-block;width:auto;">
+            <button type="submit" class="btn btn-outline-primary btn-sm">엑셀 업로드</button>
+          </form>
+        </div>
+      </div>
+      {% if uploadResult %}
+      <div class="alert alert-info mt-2">
+        업로드 결과: 성공 {{ uploadResult.success }}건, 실패 {{ uploadResult.fail }}건<br>
+        {% if uploadResult.errors.length %}
+          오류: {{ uploadResult.errors | join(', ') }}
+        {% endif %}
+      </div>
+      {% endif %}
+      <div class="mb-3">
+        <form method="get" class="row g-2 align-items-center">
+          <div class="col-auto">
+            <select name="field" class="form-select">
+              <option value="username" {% if field == 'username' %}selected{% endif %}>아이디</option>
+              <option value="name" {% if field == 'name' %}selected{% endif %}>이름</option>
+              <option value="email" {% if field == 'email' %}selected{% endif %}>이메일</option>
+            </select>
+          </div>
+          <div class="col-auto">
+            <input type="text" name="keyword" class="form-control" placeholder="검색어 입력" value="{{ keyword or '' }}">
+          </div>
+          <div class="col-auto">
+            <button type="submit" class="btn btn-primary">검색</button>
+          </div>
           <input type="hidden" name="limit" value="{{ perPage }}">
-          <input type="hidden" name="sort" value="{% if sort == 'desc' %}asc{% else %}desc{% endif %}">
+          <input type="hidden" name="sort" value="{{ sort }}">
           <input type="hidden" name="page" value="1">
-          <button type="submit" class="btn btn-link p-0 align-baseline" title="정렬 전환">
-            {% if sort == 'desc' %}
-              <i data-lucide="arrow-down" style="vertical-align:middle;"></i>
-            {% else %}
-              <i data-lucide="arrow-up" style="vertical-align:middle;"></i>
-            {% endif %}
-          </button>
         </form>
-      </th>
-      <th>아이디</th>
-      <th>이름</th>
-      <th>이메일</th>
-      <th>상태</th>
-      <th>권한</th>
-      <th>관리</th>
-    </tr>
-  </thead>
-  <tbody>
-    {% for user in users %}
-    <tr>
-      <td>{% if sort == 'desc' %}{{ startNo - loop.index0 }}{% else %}{{ startNo + loop.index0 }}{% endif %}</td>
-      <td>{{ user.username }}</td>
-      <td>{{ user.name }}</td>
-      <td>{{ user.email }}</td>
-      <td>{{ user.state or '-' }}</td>
-      <td>{{ user.role or '-' }}</td>
-      <td><a href="/user/view?id={{ user.username }}" class="btn btn-sm btn-primary">보기</a></td>
-    </tr>
-    {% endfor %}
-    {% if users.length == 0 %}
-    <tr><td colspan="7" class="text-center">회원이 없습니다.</td></tr>
-    {% endif %}
-  </tbody>
-</table>
-<nav>
-  <ul class="pagination justify-content-center">
-    <li class="page-item {% if page == 1 %}disabled{% endif %}">
-      <a class="page-link" href="?page=1&limit={{ perPage }}&sort={{ sort }}">처음</a>
-    </li>
-    <li class="page-item {% if page == 1 %}disabled{% endif %}">
-      <a class="page-link" href="?page={{ page - 1 }}&limit={{ perPage }}&sort={{ sort }}">이전</a>
-    </li>
-    {% for p in range(1, pageCount + 1) %}
-    <li class="page-item {% if page == p %}active{% endif %}">
-      <a class="page-link" href="?page={{ p }}&limit={{ perPage }}&sort={{ sort }}">{{ p }}</a>
-    </li>
-    {% endfor %}
-    <li class="page-item {% if page == pageCount %}disabled{% endif %}">
-      <a class="page-link" href="?page={{ page + 1 }}&limit={{ perPage }}&sort={{ sort }}">다음</a>
-    </li>
-    <li class="page-item {% if page == pageCount %}disabled{% endif %}">
-      <a class="page-link" href="?page={{ pageCount }}&limit={{ perPage }}&sort={{ sort }}">마지막</a>
-    </li>
-  </ul>
-</nav>
+      </div>
+      <div class="table-responsive">
+      <table class="table table-hover">
+        <thead class="table-light">
+          <tr>
+            <th>
+              No.
+              <form method="get" id="sortForm" style="display:inline;">
+                <input type="hidden" name="limit" value="{{ perPage }}">
+                <input type="hidden" name="sort" value="{% if sort == 'desc' %}asc{% else %}desc{% endif %}">
+                <input type="hidden" name="page" value="1">
+                <button type="submit" class="btn btn-link p-0 align-baseline" title="정렬 전환">
+                  {% if sort == 'desc' %}
+                    <i data-lucide="arrow-down" style="vertical-align:middle;"></i>
+                  {% else %}
+                    <i data-lucide="arrow-up" style="vertical-align:middle;"></i>
+                  {% endif %}
+                </button>
+              </form>
+            </th>
+            <th>아이디</th>
+            <th>이름</th>
+            <th>이메일</th>
+            <th>상태</th>
+            <th>권한</th>
+            <th>2차 인증</th>
+            <th>마지막 로그인</th>
+            <th>관리</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for user in users %}
+          <tr>
+            <td>{% if sort == 'desc' %}{{ startNo - loop.index0 }}{% else %}{{ startNo + loop.index0 }}{% endif %}</td>
+            <td>{{ user.username }}</td>
+            <td>{{ user.name }}</td>
+            <td>{{ user.email }}</td>
+            <td>{{ user.state or '-' }}</td>
+            <td>{{ user.role or '-' }}</td>
+            <td>{% if user.is2faVerified %}인증{% else %}미인증{% endif %}</td>
+            <td>{% if user.lastLogin %}{{ user.lastLogin | date('D h:mm') }}{% else %}-{% endif %}</td>
+            <td><a href="/user/view?id={{ user.username }}" class="btn btn-sm btn-primary">보기</a></td>
+          </tr>
+          {% endfor %}
+          {% if users.length == 0 %}
+          <tr><td colspan="7" class="text-center">회원이 없습니다.</td></tr>
+          {% endif %}
+        </tbody>
+      </table>
+      <nav>
+        <ul class="pagination justify-content-center">
+          <li class="page-item {% if page == 1 %}disabled{% endif %}">
+            <a class="page-link" href="?page=1&limit={{ perPage }}&sort={{ sort }}">처음</a>
+          </li>
+          <li class="page-item {% if page == 1 %}disabled{% endif %}">
+            <a class="page-link" href="?page={{ page - 1 }}&limit={{ perPage }}&sort={{ sort }}">이전</a>
+          </li>
+          {% for p in range(1, pageCount + 1) %}
+          <li class="page-item {% if page == p %}active{% endif %}">
+            <a class="page-link" href="?page={{ p }}&limit={{ perPage }}&sort={{ sort }}">{{ p }}</a>
+          </li>
+          {% endfor %}
+          <li class="page-item {% if page == pageCount %}disabled{% endif %}">
+            <a class="page-link" href="?page={{ page + 1 }}&limit={{ perPage }}&sort={{ sort }}">다음</a>
+          </li>
+          <li class="page-item {% if page == pageCount %}disabled{% endif %}">
+            <a class="page-link" href="?page={{ pageCount }}&limit={{ perPage }}&sort={{ sort }}">마지막</a>
+          </li>
+        </ul>
+      </nav>
+      </div>
+    </div>
+  </div>
 </div>
 {% endblock %} 

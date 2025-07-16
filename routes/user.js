@@ -8,12 +8,15 @@ const User = require('../schemas/userSchema'); // 유저 스키마 임포트
 // 사용자 관련 라우트
 router.get('/', authController.userList);
 router.get('/view', authController.userDetail);
-router.get('/edit', (req, res) => {
-  res.render('userEdit', { title: '회원정보 수정' });
-});
+router.get('/userView', authController.userViewSelf);
+// router.get('/edit', async (req, res) => {
+//   if (!req.session.userId) return res.redirect('/');
+//   const user = await User.findById(req.session.userId).populate('profileImage');
+//   res.render('userEdit', { title: '회원정보 수정', user });
+// });
 router.post('/state', authController.updateUserState);
 router.post('/role', authController.updateUserRole);
-router.post('/edit-info', authController.editInfo);
+router.post('/edit-info', upload.single('profileImage'), authController.editInfo);
 router.post('/change-password', authController.changePassword);
 router.post('/2fa', authController.update2faStatus);
 router.get('/excel-template', authController.downloadExcelTemplate);

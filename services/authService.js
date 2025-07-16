@@ -48,6 +48,9 @@ exports.login = async ({ username, password }) => {
   if (!user) throw new Error('존재하지 않는 아이디입니다.');
   const match = await bcrypt.compare(password, user.password);
   if (!match) throw new Error('비밀번호가 일치하지 않습니다.');
+  // 로그인 성공 시 lastLogin 갱신
+  user.lastLogin = new Date();
+  await user.save();
   return user;
 };
 

@@ -13,6 +13,9 @@ const userSchema = new mongoose.Schema({
   createAt: { type: Date, default: Date.now },
   updateAt: { type: Date },
   deleteAt: { type: Date },
+  statusMessage: { type: String, default: '' },
+  lastLogin: { type: Date },
+  profileImage: { type: mongoose.Schema.Types.ObjectId, ref: 'Attachment' },
 });
 
 const User = mongoose.model('User', userSchema, 'users');

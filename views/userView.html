@@ -1,59 +1,96 @@
 {% extends "layout_main.html" %}
 {% block title %}회원정보 보기{% endblock %}
 {% block content %}
+{% if session.role == 'admin' %}
 <a href="javascript:history.back()" class="btn btn-secondary mb-3">← 뒤로가기</a>
+{% endif %}
 <h2 class="mb-4">회원정보</h2> 
 <div class="card">
   <div class="card-body">
-    <p class="card-text">접속세션정보 :{{ session.role }}</p>
     <h5 class="card-title">{{ user.name }} ({{ user.username }})</h5>
     <p class="card-text">이메일: {{ user.email or '-' }}</p>
     <p class="card-text">전화번호: {{ user.phone or '-' }}</p>
-    <p class="card-text">2차 인증:
+    <p class="card-text">2차 인증: {% if session.role == 'admin' %}
       <select id="is2faSelect" class="form-select d-inline w-auto" style="width:auto;display:inline-block;" data-username="{{ user.username }}" data-original="{{ user.is2faVerified }}">
         <option value="false" {% if not user.is2faVerified %}selected{% endif %}>미인증</option>
         <option value="true" {% if user.is2faVerified %}selected{% endif %}>인증</option>
       </select>
+      {% else %}
+      {% if user.is2faVerified %}인증{% else %}미인증{% endif %}
+      {% endif %}
     </p>
     <p class="card-text">
-      상태:
+      상태: {% if session.role == 'admin' %}
       <select id="stateSelect" class="form-select d-inline w-auto" style="width:auto;display:inline-block;" data-username="{{ user.username }}" data-original="{{ user.state }}">
         <option value="temp" {% if user.state == 'temp' %}selected{% endif %}>temp</option>
         <option value="use" {% if user.state == 'use' %}selected{% endif %}>use</option>
       </select>
+      {% else %}
+      {{ user.state or '-' }}
+      {% endif %}
     </p>
     <p class="card-text">
-      권한:
+      권한: {% if session.role == 'admin' %}
       <select id="roleSelect" class="form-select d-inline w-auto" style="width:auto;display:inline-block;" data-username="{{ user.username }}" data-original="{{ user.role }}">
         <option value="general" {% if user.role == 'general' %}selected{% endif %}>general</option>
         <option value="admin" {% if user.role == 'admin' %}selected{% endif %}>admin</option>
       </select>
+      {% else %}
+      {{ user.role or '-' }}
+      {% endif %}
     </p>
     <p class="card-text">가입일: {% if user.createAt %}{{ user.createAt | date('D h:mm') }}{% else %}-{% endif %}</p>
     <p class="card-text">수정일: {% if user.updateAt %}{{ user.updateAt | date('D h:mm') }}{% else %}-{% endif %}</p>
+    <p class="card-text">상태 메시지: {{ user.statusMessage or '' }}</p>
+    <p class="card-text">마지막 로그인: {% if user.lastLogin %}{{ user.lastLogin | date('D h:mm') }}{% else %}-{% endif %}</p>
+    <p class="card-text">프로필 이미지:
+      {% if user.profileImage and user.profileImage.url %}
+        <img src="{{ user.profileImage.url }}" alt="프로필 이미지" style="width:60px;height:60px;border-radius:100px;object-fit:cover;vertical-align:middle;"/>
+      {% else %}
+        <span style="display:inline-block;width:60px;height:60px;border-radius:100px;background:#eee;text-align:center;line-height:60px;vertical-align:middle;">
+          <i data-lucide="user" style="color:#bbb;width:32px;height:32px;"></i>
+        </span>
+      {% endif %}
+    </p>
     <a href="#" class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#editInfoModal">수정</a>
     <button type="button" class="btn btn-secondary" data-bs-toggle="modal" data-bs-target="#pwChangeModal">비밀번호 변경</button>
+{% if session.role == 'admin' %}
     <a href="/user" class="btn btn-secondary">목록</a>
+{% endif %}
   </div>
 </div>
 
-<!-- 이름/전화번호 수정 모달 -->
+<!-- 이름/전화번호/상태메시지/프로필이미지 수정 모달 -->
 <div class="modal fade" id="editInfoModal" tabindex="-1" aria-labelledby="editInfoModalLabel" aria-hidden="true">
   <div class="modal-dialog">
     <div class="modal-content">
-      <form id="editInfoForm">
+      <form id="editInfoForm" enctype="multipart/form-data">
+        <input type="hidden" name="username" value="{{ user.username }}">
         <div class="modal-header">
           <h5 class="modal-title" id="editInfoModalLabel">회원정보 수정</h5>
           <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
         </div>
         <div class="modal-body">
+        {% if session.role == 'admin' %}
           <div class="mb-3">
             <label for="editName" class="form-label">이름</label>
             <input type="text" class="form-control" id="editName" name="name" value="{{ user.name }}" required>
           </div>
+        {% endif %}
           <div class="mb-3">
             <label for="editPhone" class="form-label">전화번호</label>
             <input type="text" class="form-control" id="editPhone" name="phone" value="{{ user.phone }}">
+          </div>
+          <div class="mb-3">
+            <label for="editStatusMessage" class="form-label">상태 메시지</label>
+            <input type="text" class="form-control" id="editStatusMessage" name="statusMessage" value="{{ user.statusMessage }}">
+          </div>
+          <div class="mb-3">
+            <label for="editProfileImage" class="form-label">프로필 이미지</label>
+            <input type="file" class="form-control" id="editProfileImage" name="profileImage">
+            {% if user.profileImage and user.profileImage.url %}
+              <img src="{{ user.profileImage.url }}" alt="프로필 이미지" style="width:60px;height:60px;border-radius:100px;object-fit:cover;margin-top:8px;"/>
+            {% endif %}
           </div>
         </div>
         <div class="modal-footer">
@@ -177,15 +214,13 @@
       this.value = this.getAttribute('data-original') === 'true' ? 'true' : 'false';
     }
   });
-  // 이름/전화번호 수정
+  // 이름/전화번호/상태메시지/프로필이미지 수정
   document.getElementById('editInfoForm').addEventListener('submit', function(e) {
     e.preventDefault();
-    const name = document.getElementById('editName').value;
-    const phone = document.getElementById('editPhone').value;
+    const formData = new FormData(this);
     fetch('/user/edit-info', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username: '{{ user.username }}', name, phone })
+      body: formData
     })
     .then(res => res.json())
     .then(data => {

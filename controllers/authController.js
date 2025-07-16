@@ -7,6 +7,7 @@ const fs = require('fs'); // 파일 시스템 처리
 
 const authService = require('../services/authService'); // 인증 서비스
 const User = require('../schemas/userSchema'); // 사용자 스키마 
+const Attachment = require('../schemas/attachmentSchema'); // Attachment 모델 추가
 
 const dbConnect = process.env.MONGODB_CONNECT; // MongoDB 연결 문자열
 
@@ -256,13 +257,28 @@ exports.update2faStatus = async (req, res) => {
 
 // 사용자 목록 (pagination)
 exports.userList = async (req, res) => {
+  // admin 권한 체크
+  if (!req.session || req.session.role !== 'admin') {
+    return res.send(`
+      <script>
+        alert('페이지 권한이 없습니다.');
+        window.history.back();
+      </script>
+    `);
+  }
   try {
     const perPage = parseInt(req.query.limit) || 10;
     const page = parseInt(req.query.page) || 1;
     const sort = req.query.sort === 'asc' ? 'asc' : 'desc';
-    const total = await User.countDocuments();
+    const field = req.query.field || '';
+    const keyword = req.query.keyword || '';
+    let findCond = {};
+    if (field && keyword) {
+      findCond[field] = { $regex: keyword, $options: 'i' };
+    }
+    const total = await User.countDocuments(findCond);
     const sortOption = sort === 'asc' ? 1 : -1;
-    const users = await User.find({}, 'username name email state role')
+    const users = await User.find(findCond, 'username name email state role is2faVerified lastLogin')
       .skip((page - 1) * perPage)
       .limit(perPage)
       .sort({ createAt: sortOption });
@@ -282,7 +298,9 @@ exports.userList = async (req, res) => {
       pageCount: Math.ceil(total / perPage),
       sort,
       startNo,
-      currentPath: '/user'
+      currentPath: '/user',
+      field,
+      keyword,
     });
   } catch (err) {
     console.error('회원 목록 조회 오류:', err);
@@ -293,7 +311,7 @@ exports.userList = async (req, res) => {
 // 사용자 상세
 exports.userDetail = async (req, res) => {
   try {
-    const user = await User.findOne({ username: req.query.id });
+    const user = await User.findOne({ username: req.query.id }).populate('profileImage');
     if (!user) {
       return res.status(404).send('사용자를 찾을 수 없습니다.');
     }
@@ -308,13 +326,50 @@ exports.userDetail = async (req, res) => {
   }
 };
 
+// 내 계정 정보 보기
+exports.userViewSelf = async (req, res) => {
+  if (!req.session.userId) return res.redirect('/');
+  const user = await User.findById(req.session.userId).populate('profileImage');
+  res.render('userView', { title: '회원정보 보기', user, session: req.session });
+};
+
 // 이름/전화번호 수정
 exports.editInfo = async (req, res) => {
   try {
-    const { username, name, phone } = req.body;
+    const { username, name, phone, statusMessage } = req.body;
     if (!username || !name) return res.json({ success: false, message: '필수 정보 누락' });
-    const user = await User.findOneAndUpdate({ username }, { name, phone, updateAt: new Date() }, { new: true });
-    if (!user) return res.json({ success: false, message: '사용자 없음' });
+    const update = { name, phone, updateAt: new Date() };
+    if (typeof statusMessage !== 'undefined') update.statusMessage = statusMessage;
+    // 프로필 이미지 업로드 처리
+    if (req.file) {
+      // 기존 프로필 이미지 삭제
+      const user = await User.findOne({ username });
+      if (user && user.profileImage) {
+        const oldAttachment = await Attachment.findById(user.profileImage);
+        if (oldAttachment) {
+          // 파일 시스템에서 삭제
+          const fs = require('fs');
+          const path = require('path');
+          const oldPath = path.join(__dirname, '../uploads', oldAttachment.filename);
+          fs.unlink(oldPath, () => {});
+          await oldAttachment.deleteOne();
+        }
+      }
+      // 새 Attachment 저장
+      const newAttachment = await Attachment.create({
+        filename: req.file.filename,
+        originalname: req.file.originalname,
+        url: `/uploads/${req.file.filename}`,
+        size: req.file.size,
+        mimetype: req.file.mimetype,
+        uploader: user ? user._id : undefined,
+        refType: 'user',
+        refId: user ? user._id : undefined,
+      });
+      update.profileImage = newAttachment._id;
+    }
+    const updatedUser = await User.findOneAndUpdate({ username }, update, { new: true });
+    if (!updatedUser) return res.json({ success: false, message: '사용자 없음' });
     res.json({ success: true });
   } catch (err) {
     console.error('회원정보 수정 오류:', err);
