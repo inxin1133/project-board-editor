@@ -26,6 +26,20 @@ app.use(session({
   cookie: { maxAge: 1000 * 60 * 60 * 3 }, // 세션 만료 시간 3시간
 }));
 
+// 로그인한 사용자 정보를 모든 템플릿에서 사용 가능하게 설정
+app.use((req, res, next) => {
+  if (req.session && req.session.userId) {
+    res.locals.user = {
+      name: req.session.name,
+      username: req.session.username,
+      role: req.session.role
+    };
+  } else {
+    res.locals.user = null;
+  }
+  next();
+});
+
 // 정적 파일 제공
 app.use(express.static(path.join(__dirname, 'public')));
 

@@ -19,7 +19,29 @@
           <li class="nav-item"><a class="nav-link{% if currentPath=='/home' %} active{% endif %}" href="/home">Home</a></li>
           <li class="nav-item"><a class="nav-link{% if currentPath=='/user' %} active{% endif %}" href="/user">User</a></li>
           <li class="nav-item"><a class="nav-link{% if currentPath=='/board' %} active{% endif %}" href="/board">Board</a></li>
-          <li class="nav-item"><a class="nav-link{% if currentPath=='/logout' %} active{% endif %}" href="/logout">Logout</a></li>
+          <li class="nav-item d-flex align-items-center ms-2 dropdown">
+            <a href="#" class="d-flex align-items-center nav-link dropdown-toggle p-0 border-0 bg-transparent" id="profileDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false" style="box-shadow:none;">
+              <span style="display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:100px;background:#22c55e;">
+                <i data-lucide="user" style="color:white;width:16px;height:16px;"></i>
+              </span>
+              <span class="ms-2 text-white" style="font-size:1rem;">내정보</span>
+            </a>
+            <ul class="dropdown-menu dropdown-menu-end mt-2" aria-labelledby="profileDropdown" style="min-width:220px;">
+              <li class="px-3 py-2 d-flex align-items-center" style="gap:12px;">
+                <span style="display:inline-flex;align-items:center;justify-content:center;width:50px;height:50px;border-radius:100px;background:#22c55e;">
+                  <i data-lucide="user" style="color:white;width:32px;height:32px;"></i>
+                </span>
+                <div>
+                  <div style="font-weight:bold;">{{ user.name }}</div>
+                  <div style="font-size:0.9em;color:#888;">{{ user.username }}</div>
+                </div>
+              </li>
+              <li><hr class="dropdown-divider"></li>
+              <li><a class="dropdown-item" href="/userView">내 계정 정보</a></li>
+              <li><a class="dropdown-item" href="#">관리자 설정</a></li>
+              <li><a class="dropdown-item text-danger" href="/logout">로그아웃</a></li>
+            </ul>
+          </li>
         </ul>
       </div>
     </div>
