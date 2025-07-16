@@ -25,4 +25,14 @@
   </div>
 </form>
 
+{% endblock %}
+
+{% block script %}
+  {% if message %}
+    <div id="login-error-message" style="display:none;">{{ message }}</div>
+    <script>
+      const msg = document.getElementById('login-error-message')?.textContent;
+      if (msg) alert(msg);
+    </script>
+  {% endif %}
 {% endblock %} 

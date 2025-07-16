@@ -99,7 +99,8 @@ exports.login = async (req, res) => {
     }
     res.redirect('/home');
   } catch (err) {
-    res.status(400).send(err.message || '로그인 중 오류가 발생했습니다.');
+    // 로그인 실패 시 로그인 페이지에 에러 메시지와 함께 렌더링
+    res.render('index', { title: '로그인', message: err.message, session: req.session });
   }
 };
 
