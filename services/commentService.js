@@ -6,8 +6,24 @@ exports.createComment = async ({ board, content, author, parent }) => {
 };
 
 exports.deleteComment = async (id) => {
-  // soft delete
-  return await Comment.findByIdAndUpdate(id, { isDeleted: true, status: 'deleted' });
+  // 하위 답글이 있는지 확인
+  const childCount = await Comment.countDocuments({ parent: id, isDeleted: false });
+  if (childCount > 0) {
+    // 하위 답글이 있으면 상태만 변경 (soft delete)
+    await Comment.findByIdAndUpdate(id, {
+      isDeleted: true,
+      status: 'deleted',
+    });
+    return { deleted: false }; // 완전 삭제 아님
+  } else {
+    // 완전 삭제
+    await Comment.deleteOne({ _id: id });
+    return { deleted: true }; // 완전 삭제
+  }
+};
+
+exports.updateComment = async (id, content) => {
+  return await Comment.findByIdAndUpdate(id, { content, updatedAt: new Date() }, { new: true });
 };
 
 exports.getCommentById = async (id) => {
@@ -15,8 +31,8 @@ exports.getCommentById = async (id) => {
 };
 
 exports.getCommentsTree = async (boardId) => {
-  // 모든 댓글/대댓글 조회 (isDeleted=false)
-  const comments = await Comment.find({ board: boardId, isDeleted: false })
+  // 모든 댓글/대댓글 조회 (삭제된 댓글도 포함)
+  const comments = await Comment.find({ board: boardId })
     .sort({ createdAt: 1 })
     .populate('author', 'username name');
   // 트리 구조로 변환
@@ -25,6 +41,7 @@ exports.getCommentsTree = async (boardId) => {
     map[c._id] = {
       _id: c._id,
       content: c.content,
+      status: c.status, // status 필드 추가
       authorName: c.author.name || c.author.username,
       authorId: c.author._id.toString(),
       createdAt: c.createdAt,

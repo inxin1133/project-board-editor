@@ -31,4 +31,20 @@ exports.delete = async (req, res) => {
   } catch (err) {
     res.status(400).json({ success: false, message: err.message });
   }
+};
+
+exports.edit = async (req, res) => {
+  try {
+    const userId = req.session.userId;
+    const { id, content } = req.body;
+    const comment = await commentService.getCommentById(id);
+    if (!comment) return res.status(404).json({ success: false, message: '댓글 없음' });
+    if (!(userId && (userId == comment.author.toString() || req.session.role === 'admin'))) {
+      return res.status(403).json({ success: false, message: '권한 없음' });
+    }
+    await commentService.updateComment(id, content);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(400).json({ success: false, message: err.message });
+  }
 }; 

@@ -71,14 +71,12 @@
 <!-- 댓글/대댓글 영역 -->
 <div class="mt-5">
   <h5>댓글</h5>
-  <!-- 댓글 입력 폼 -->
+  <!-- 댓글 입력 폼 (최상위 댓글만) -->
   <form id="commentForm" class="mb-3">
-    <input type="hidden" name="parent" id="commentParentId">
     <div class="mb-2">
       <textarea class="form-control" name="content" id="commentContent" rows="2" placeholder="댓글을 입력하세요" required></textarea>
     </div>
-    <button type="submit" class="btn btn-primary btn-sm">댓글 등록</button>
-    <button type="button" class="btn btn-secondary btn-sm d-none" id="cancelReplyBtn">취소</button>
+    <button type="submit" class="btn btn-primary btn-sm" id="commentSubmitBtn">댓글 등록</button>
   </form>
   <!-- 댓글 목록 -->
   <div id="comments">
@@ -86,14 +84,26 @@
       <div class="mb-2" style="margin-left:{{ comment.depth * 32 }}px;">
         <div class="d-flex align-items-center">
           <span class="fw-bold me-2">{{ comment.authorName }}</span>
-          <span class="text-muted small me-2">{{ comment.createdAt|date('Y-m-d H:i') }}</span>
+          <span class="text-muted small me-2">{{ comment.createdAt|date('D HH:mm') }}</span>
           {% if session.userId == comment.authorId or session.role == 'admin' %}
-            <button class="btn btn-link btn-sm p-0 me-1 edit-comment-btn" data-id="{{ comment._id }}">수정</button>
-            <button class="btn btn-link btn-sm p-0 text-danger delete-comment-btn" data-id="{{ comment._id }}">삭제</button>
+            {% if comment.status != 'deleted' %}
+              <button class="btn btn-link btn-sm p-0 me-1 edit-comment-btn" data-id="{{ comment._id }}">수정</button>
+              <button class="btn btn-link btn-sm p-0 text-danger delete-comment-btn" data-id="{{ comment._id }}">삭제</button>
+            {% endif %}
           {% endif %}
-          <button class="btn btn-link btn-sm p-0 reply-comment-btn" data-id="{{ comment._id }}">답글</button>
+          {% if comment.status != 'deleted' %}
+            <button class="btn btn-link btn-sm p-0 reply-comment-btn" data-id="{{ comment._id }}">답글</button>
+          {% endif %}
         </div>
-        <div class="comment-content" id="comment-content-{{ comment._id }}">{{ comment.content }}</div>
+        <div class="comment-content" id="comment-content-{{ comment._id }}">
+          {% if comment.status == 'deleted' %}
+            <span class="text-muted fst-italic">[글이 작성자에 의해 삭제되었습니다.]</span>
+          {% else %}
+            {{ comment.content }}
+          {% endif %}
+        </div>
+        <div class="edit-form-area" id="edit-form-area-{{ comment._id }}"></div>
+        <div class="reply-form-area" id="reply-form-area-{{ comment._id }}"></div>
       </div>
     {% else %}
       <div class="text-muted">댓글이 없습니다.</div>
@@ -104,6 +114,9 @@
 {% block scripts %}
 <script src="https://unpkg.com/lucide@latest"></script>
 <script>lucide.createIcons();</script>
+<script>
+  window.comments = {{ comments | dump | safe }};
+</script>
 <script>
   document.getElementById('likeBtn')?.addEventListener('click', async function() {
     const btn = this;
@@ -140,41 +153,91 @@
     }
   });
 // 댓글/대댓글 입력, 수정, 삭제, 답글 UI 처리 (AJAX)
-let replyParentId = null;
+let activeReplyForm = null;
 document.querySelectorAll('.reply-comment-btn').forEach(btn => {
   btn.addEventListener('click', function() {
-    replyParentId = this.dataset.id;
-    document.getElementById('commentParentId').value = replyParentId;
-    document.getElementById('commentContent').focus();
-    document.getElementById('cancelReplyBtn').classList.remove('d-none');
+    const parentId = this.dataset.id;
+    // 기존 열려있는 답글 폼 제거
+    if (activeReplyForm) activeReplyForm.remove();
+    // 답글 입력 폼 생성
+    const area = document.getElementById('reply-form-area-' + parentId);
+    const form = document.createElement('form');
+    form.className = 'replyForm mb-2';
+    form.innerHTML = `
+      <div class="mb-2">
+        <textarea class="form-control" name="content" rows="2" placeholder="답글을 입력하세요" required></textarea>
+      </div>
+      <button type="submit" class="btn btn-primary btn-sm">답글 등록</button>
+      <button type="button" class="btn btn-secondary btn-sm ms-2 cancel-reply-form">취소</button>
+    `;
+    // submit 이벤트
+    form.addEventListener('submit', async function(e) {
+      e.preventDefault();
+      const content = form.querySelector('textarea').value.trim();
+      if (!content) return;
+      const res = await fetch('/comment/write', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ board: '{{ board._id }}', content, parent: parentId })
+      });
+      const data = await res.json();
+      if (data.success) location.reload();
+      else alert(data.message || '답글 등록 실패');
+    });
+    // 취소 버튼
+    form.querySelector('.cancel-reply-form').addEventListener('click', function() {
+      form.remove();
+      activeReplyForm = null;
+    });
+    area.appendChild(form);
+    activeReplyForm = form;
+    form.querySelector('textarea').focus();
   });
 });
-document.getElementById('cancelReplyBtn')?.addEventListener('click', function() {
-  replyParentId = null;
-  document.getElementById('commentParentId').value = '';
-  this.classList.add('d-none');
-});
+
 document.getElementById('commentForm')?.addEventListener('submit', async function(e) {
   e.preventDefault();
   const content = document.getElementById('commentContent').value.trim();
-  const parent = document.getElementById('commentParentId').value;
+  const parent = null; // 최상위 댓글
+  const editId = null;
   if (!content) return;
-  const res = await fetch('/comment/write', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ board: '{{ board._id }}', content, parent })
-  });
-  const data = await res.json();
-  if (data.success) location.reload();
-  else alert(data.message || '댓글 등록 실패');
+  if (editId) {
+    // 댓글 수정
+    const res = await fetch('/comment/edit', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: editId, content })
+    });
+    const data = await res.json();
+    if (data.success) location.reload();
+    else alert(data.message || '댓글 수정 실패');
+  } else {
+    // 새 댓글/대댓글 등록
+    const res = await fetch('/comment/write', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ board: '{{ board._id }}', content, parent })
+    });
+    const data = await res.json();
+    if (data.success) location.reload();
+    else alert(data.message || '댓글 등록 실패');
+  }
 });
 document.querySelectorAll('.delete-comment-btn').forEach(btn => {
   btn.addEventListener('click', async function() {
-    if (!confirm('댓글을 삭제하시겠습니까?')) return;
+    const commentId = this.dataset.id;
+    const replyCount = window.comments.filter(c => c.parent === commentId).length;
+    let confirmMsg;
+    if (replyCount === 0) {
+      confirmMsg = '댓글을 삭제하시겠습니까?';
+    } else {
+      confirmMsg = '답글이 달린 댓글은 완전 삭제 될 수 없고, "글이 작성자에 의해 삭제되었습니다" 라고 표시 전환 됩니다.\n정말 삭제하시겠습니까?';
+    }
+    if (!confirm(confirmMsg)) return;
     const res = await fetch('/comment/delete', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id: this.dataset.id })
+      body: JSON.stringify({ id: commentId })
     });
     const data = await res.json();
     if (data.success) location.reload();
@@ -229,6 +292,51 @@ document.getElementById('deleteAllBtn')?.addEventListener('click', async functio
 
 document.getElementById('downloadAllBtn')?.addEventListener('click', function() {
   window.location.href = '/attachment/downloadAll?boardId={{ board._id }}';
+});
+
+// JS: 댓글/답글 수정 폼 동적 생성
+let activeEditForm = null;
+document.querySelectorAll('.edit-comment-btn').forEach(btn => {
+  btn.addEventListener('click', function() {
+    const commentId = this.dataset.id;
+    // 기존 열려있는 수정 폼 제거
+    if (activeEditForm) activeEditForm.remove();
+    // 수정 입력 폼 생성
+    const area = document.getElementById('edit-form-area-' + commentId);
+    const contentDiv = document.getElementById('comment-content-' + commentId);
+    const oldContent = contentDiv.textContent;
+    const form = document.createElement('form');
+    form.className = 'editForm mb-2';
+    form.innerHTML = `
+      <div class="mb-2">
+        <textarea class="form-control" rows="2" required>${oldContent}</textarea>
+      </div>
+      <button type="submit" class="btn btn-primary btn-sm">수정 완료</button>
+      <button type="button" class="btn btn-secondary btn-sm ms-2 cancel-edit-form">취소</button>
+    `;
+    // submit 이벤트
+    form.addEventListener('submit', async function(e) {
+      e.preventDefault();
+      const content = form.querySelector('textarea').value.trim();
+      if (!content) return;
+      const res = await fetch('/comment/edit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: commentId, content })
+      });
+      const data = await res.json();
+      if (data.success) location.reload();
+      else alert(data.message || '댓글 수정 실패');
+    });
+    // 취소 버튼
+    form.querySelector('.cancel-edit-form').addEventListener('click', function() {
+      form.remove();
+      activeEditForm = null;
+    });
+    area.appendChild(form);
+    activeEditForm = form;
+    form.querySelector('textarea').focus();
+  });
 });
 </script>
 {% endblock %} 
