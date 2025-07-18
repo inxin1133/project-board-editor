@@ -1,0 +1,413 @@
+{% extends "layout_main.html" %}
+
+{% block content %}
+<div class="container mt-4">
+  <div class="row justify-content-center">
+    <div class="col-lg-10">
+      <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Editor 수정</h2>
+        <a href="/editor/view/{{ post._id }}" class="btn btn-outline-secondary">
+          <i data-lucide="arrow-left" style="width: 16px; height: 16px;"></i>
+          돌아가기
+        </a>
+      </div>
+
+      <form id="editorForm">
+        <div class="mb-3">
+          <label for="title" class="form-label">제목</label>
+          <input type="text" class="form-control" id="title" name="title" value="{{ post.title }}" required>
+        </div>
+        
+        <div class="mb-3">
+          <label for="content" class="form-label">내용</label>
+          <div id="editor"></div>
+        </div>
+
+        <div class="d-flex justify-content-end gap-2">
+          <button type="button" class="btn btn-outline-secondary" onclick="location.href='/editor/view/{{ post._id }}'">취소</button>
+          <button type="submit" class="btn btn-primary">수정하기</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Toast 알림 -->
+<div class="toast-container position-fixed bottom-0 end-0 p-3">
+  <div id="toast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
+    <div class="toast-header">
+      <strong class="me-auto">알림</strong>
+      <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+    </div>
+    <div class="toast-body" id="toastMessage"></div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<!-- Toastr.js -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css">
+
+<!-- Editor.js -->
+<script src="https://unpkg.com/@editorjs/editorjs@latest"></script>
+<script src="https://unpkg.com/@editorjs/header@latest"></script>
+<script src="https://unpkg.com/@editorjs/list@latest"></script>
+<script src="https://unpkg.com/@editorjs/paragraph@latest"></script>
+<script src="https://unpkg.com/@editorjs/quote@latest"></script>
+<script src="https://unpkg.com/@editorjs/marker@latest"></script>
+<script src="https://unpkg.com/@editorjs/code@latest"></script>
+<script src="https://unpkg.com/@editorjs/delimiter@latest"></script>
+<script src="https://unpkg.com/@editorjs/table@latest"></script>
+
+<script>
+  let editor;
+  let useSimpleTextarea = false;
+  let isSubmitting = false; // 중복 제출 방지
+
+  document.addEventListener("DOMContentLoaded", function() {
+    if (window.lucide) lucide.createIcons();
+    
+    // Editor.js가 로드되었는지 확인 (더 긴 지연 후 확인)
+    setTimeout(() => {
+      console.log('EditorJS:', typeof EditorJS);
+      console.log('Header:', typeof Header);
+      
+      if (typeof EditorJS !== 'undefined' && typeof Header !== 'undefined') {
+              try {
+          console.log('Editor.js 초기화 시작...');
+          // HTML을 Editor.js 데이터로 변환
+          const htmlContent = `{{ post.content | safe }}`;
+          const editorData = convertHTMLToEditorData(htmlContent);
+          
+          // Editor.js 초기화
+          editor = new EditorJS({
+          holder: 'editor',
+          placeholder: '내용을 입력하세요...',
+          tools: {
+            header: {
+              class: Header,
+              config: {
+                placeholder: '제목을 입력하세요',
+                levels: [1, 2, 3, 4, 5, 6],
+                defaultLevel: 2
+              }
+            },
+            list: {
+              class: List,
+              inlineToolbar: true,
+              config: {
+                defaultStyle: 'unordered'
+              }
+            },
+            paragraph: {
+              class: Paragraph,
+              inlineToolbar: true
+            },
+            quote: {
+              class: Quote,
+              inlineToolbar: true,
+              config: {
+                quotePlaceholder: '인용구를 입력하세요',
+                captionPlaceholder: '작성자를 입력하세요'
+              }
+            },
+            marker: {
+              class: Marker,
+              shortcut: 'CMD+SHIFT+M'
+            },
+            code: {
+              class: CodeTool,
+              config: {
+                placeholder: '코드를 입력하세요'
+              }
+            },
+            delimiter: Delimiter,
+            table: {
+              class: Table,
+              inlineToolbar: true,
+              config: {
+                rows: 2,
+                cols: 3
+              }
+            }
+          },
+          data: editorData
+        });
+      } catch (error) {
+        console.error('Editor.js 초기화 오류:', error);
+        fallbackToTextarea();
+      }
+    } else {
+      console.warn('Editor.js 라이브러리가 로드되지 않았습니다. 기본 텍스트 영역을 사용합니다.');
+      fallbackToTextarea();
+    }
+    }, 100); // 100ms 지연 후 확인
+  });
+
+  // Editor.js 로드 실패 시 기본 텍스트 영역으로 대체
+  function fallbackToTextarea() {
+    useSimpleTextarea = true;
+    const editorDiv = document.getElementById('editor');
+    const htmlContent = `{{ post.content | safe }}`;
+    // HTML 태그 제거하고 텍스트만 추출
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = htmlContent;
+    const textContent = tempDiv.textContent || tempDiv.innerText || '';
+    
+    editorDiv.innerHTML = `
+      <textarea class="form-control" id="simpleContent" rows="15" placeholder="내용을 입력하세요...">${textContent}</textarea>
+      <div class="form-text text-muted mt-2">
+        <small>Editor.js가 로드되지 않아 기본 텍스트 영역을 사용합니다.</small>
+      </div>
+    `;
+  }
+
+  // 폼 제출 처리
+  document.getElementById('editorForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    // 중복 제출 방지
+    if (isSubmitting) {
+      toastr.warning('처리 중입니다. 잠시만 기다려주세요.');
+      return;
+    }
+    
+    const title = document.getElementById('title').value.trim();
+    if (!title) {
+      toastr.error('제목을 입력해주세요.');
+      return;
+    }
+
+    let content = '';
+    
+    // 제출 상태 설정
+    isSubmitting = true;
+    const submitBtn = document.querySelector('button[type="submit"]');
+    const originalText = submitBtn.textContent;
+    submitBtn.textContent = '처리 중...';
+    submitBtn.disabled = true;
+    
+    try {
+      if (useSimpleTextarea) {
+        // 기본 텍스트 영역 사용
+        const simpleContent = document.getElementById('simpleContent');
+        if (!simpleContent) {
+          toastr.error('내용 입력 영역을 찾을 수 없습니다.');
+          return;
+        }
+        content = simpleContent.value.trim();
+        if (!content) {
+          toastr.error('내용을 입력해주세요.');
+          return;
+        }
+        // 줄바꿈을 <br> 태그로 변환
+        content = content.replace(/\n/g, '<br>');
+      } else {
+        // Editor.js 사용
+        if (!editor) {
+          toastr.error('에디터가 초기화되지 않았습니다.');
+          return;
+        }
+        
+        // Editor.js 데이터 가져오기
+        const editorData = await editor.save();
+        
+        // HTML로 변환
+        content = convertEditorDataToHTML(editorData);
+        
+        if (!content || content.trim() === '') {
+          toastr.error('내용을 입력해주세요.');
+          return;
+        }
+      }
+      
+      const response = await fetch('/editor/edit/{{ post._id }}', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          title: title,
+          content: content
+        })
+      });
+
+      const result = await response.json();
+      
+      if (result.success) {
+        toastr.success(result.message);
+        // 즉시 리다이렉트
+        window.location.href = result.redirect;
+      } else {
+        toastr.error(result.message);
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      toastr.error('게시글 수정 중 오류가 발생했습니다.');
+    } finally {
+      // 제출 상태 초기화
+      isSubmitting = false;
+      submitBtn.textContent = originalText;
+      submitBtn.disabled = false;
+    }
+  });
+
+  // HTML을 Editor.js 데이터로 변환하는 함수
+  function convertHTMLToEditorData(html) {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(html, 'text/html');
+    const blocks = [];
+    
+    // HTML 요소들을 순회하면서 Editor.js 블록으로 변환
+    doc.body.childNodes.forEach(node => {
+      if (node.nodeType === Node.ELEMENT_NODE) {
+        switch (node.tagName.toLowerCase()) {
+          case 'h1':
+          case 'h2':
+          case 'h3':
+          case 'h4':
+          case 'h5':
+          case 'h6':
+            const level = parseInt(node.tagName.charAt(1));
+            blocks.push({
+              type: 'header',
+              data: {
+                text: node.textContent,
+                level: level
+              }
+            });
+            break;
+          case 'p':
+            blocks.push({
+              type: 'paragraph',
+              data: {
+                text: node.textContent
+              }
+            });
+            break;
+          case 'ul':
+            const ulItems = Array.from(node.querySelectorAll('li')).map(li => li.textContent);
+            blocks.push({
+              type: 'list',
+              data: {
+                style: 'unordered',
+                items: ulItems
+              }
+            });
+            break;
+          case 'ol':
+            const olItems = Array.from(node.querySelectorAll('li')).map(li => li.textContent);
+            blocks.push({
+              type: 'list',
+              data: {
+                style: 'ordered',
+                items: olItems
+              }
+            });
+            break;
+          case 'blockquote':
+            const quoteText = node.querySelector('p')?.textContent || node.textContent;
+            const caption = node.querySelector('cite')?.textContent || '';
+            blocks.push({
+              type: 'quote',
+              data: {
+                text: quoteText,
+                caption: caption
+              }
+            });
+            break;
+          case 'pre':
+            const codeText = node.querySelector('code')?.textContent || node.textContent;
+            blocks.push({
+              type: 'code',
+              data: {
+                code: codeText
+              }
+            });
+            break;
+          case 'hr':
+            blocks.push({
+              type: 'delimiter',
+              data: {}
+            });
+            break;
+          case 'table':
+            const rows = Array.from(node.querySelectorAll('tr')).map(row => 
+              Array.from(row.querySelectorAll('td, th')).map(cell => cell.textContent)
+            );
+            blocks.push({
+              type: 'table',
+              data: {
+                content: rows
+              }
+            });
+            break;
+          default:
+            // 기타 요소는 paragraph로 처리
+            if (node.textContent.trim()) {
+              blocks.push({
+                type: 'paragraph',
+                data: {
+                  text: node.textContent
+                }
+              });
+            }
+        }
+      }
+    });
+    
+    return { blocks };
+  }
+
+  // Editor.js 데이터를 HTML로 변환하는 함수
+  function convertEditorDataToHTML(editorData) {
+    let html = '';
+    
+    editorData.blocks.forEach(block => {
+      switch (block.type) {
+        case 'header':
+          html += `<h${block.data.level}>${block.data.text}</h${block.data.level}>`;
+          break;
+        case 'paragraph':
+          html += `<p>${block.data.text}</p>`;
+          break;
+        case 'list':
+          const listType = block.data.style === 'ordered' ? 'ol' : 'ul';
+          html += `<${listType}>`;
+          block.data.items.forEach(item => {
+            html += `<li>${item}</li>`;
+          });
+          html += `</${listType}>`;
+          break;
+        case 'quote':
+          html += `<blockquote><p>${block.data.text}</p>`;
+          if (block.data.caption) {
+            html += `<cite>${block.data.caption}</cite>`;
+          }
+          html += '</blockquote>';
+          break;
+        case 'code':
+          html += `<pre><code>${block.data.code}</code></pre>`;
+          break;
+        case 'delimiter':
+          html += '<hr>';
+          break;
+        case 'table':
+          html += '<table><tbody>';
+          block.data.content.forEach(row => {
+            html += '<tr>';
+            row.forEach(cell => {
+              html += `<td>${cell}</td>`;
+            });
+            html += '</tr>';
+          });
+          html += '</tbody></table>';
+          break;
+      }
+    });
+    
+    return html;
+  }
+</script>
+{% endblock %} 

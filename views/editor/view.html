@@ -1,0 +1,173 @@
+{% extends "layout_main.html" %}
+
+{% block content %}
+<div class="container mt-4">
+  <div class="row justify-content-center">
+    <div class="col-lg-10">
+      <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>{{ post.title }}</h2>
+        <div class="d-flex gap-2">
+          <a href="/editor" class="btn btn-outline-secondary">
+            <i data-lucide="list" style="width: 16px; height: 16px;"></i>
+            목록
+          </a>
+          {% if me.username == post.authorUsername %}
+            <a href="/editor/edit/{{ post._id }}" class="btn btn-outline-primary">
+              <i data-lucide="edit" style="width: 16px; height: 16px;"></i>
+              수정
+            </a>
+            <button type="button" class="btn btn-outline-danger" onclick="deletePost()">
+              <i data-lucide="trash-2" style="width: 16px; height: 16px;"></i>
+              삭제
+            </button>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- 게시글 정보 -->
+      <div class="card mb-4">
+        <div class="card-body">
+          <div class="row">
+            <div class="col-md-8">
+              <h5 class="card-title">{{ post.title }}</h5>
+              <p class="card-text text-muted">
+                작성자: {{ post.authorName }} ({{ post.authorUsername }}) | 
+                작성일: {{ post.createdAt | date('yyyy-MM-dd HH:mm') }} | 
+                조회수: {{ post.views }}
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 게시글 내용 -->
+      <div class="card">
+        <div class="card-body">
+          <div class="editor-content">
+            {{ post.content | safe }}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 삭제 확인 모달 -->
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="deleteModalLabel">게시글 삭제</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        정말로 이 게시글을 삭제하시겠습니까?
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">취소</button>
+        <button type="button" class="btn btn-danger" onclick="confirmDelete()">삭제</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<!-- Toastr.js -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css">
+
+<script>
+  document.addEventListener("DOMContentLoaded", function() {
+    if (window.lucide) lucide.createIcons();
+  });
+
+  function deletePost() {
+    const deleteModal = new bootstrap.Modal(document.getElementById('deleteModal'));
+    deleteModal.show();
+  }
+
+  async function confirmDelete() {
+    try {
+      const response = await fetch(`/editor/delete/{{ post._id }}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      });
+
+      const result = await response.json();
+      
+      if (result.success) {
+        toastr.success(result.message);
+        setTimeout(() => {
+          window.location.href = result.redirect;
+        }, 1000);
+      } else {
+        toastr.error(result.message);
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      toastr.error('게시글 삭제 중 오류가 발생했습니다.');
+    }
+  }
+</script>
+
+<style>
+  .editor-content {
+    line-height: 1.6;
+  }
+  
+  .editor-content h1, .editor-content h2, .editor-content h3, 
+  .editor-content h4, .editor-content h5, .editor-content h6 {
+    margin-top: 1.5rem;
+    margin-bottom: 1rem;
+  }
+  
+  .editor-content p {
+    margin-bottom: 1rem;
+  }
+  
+  .editor-content ul, .editor-content ol {
+    margin-bottom: 1rem;
+    padding-left: 2rem;
+  }
+  
+  .editor-content blockquote {
+    border-left: 4px solid #007bff;
+    padding-left: 1rem;
+    margin: 1rem 0;
+    font-style: italic;
+  }
+  
+  .editor-content pre {
+    background-color: #f8f9fa;
+    padding: 1rem;
+    border-radius: 0.375rem;
+    overflow-x: auto;
+  }
+  
+  .editor-content code {
+    background-color: #f8f9fa;
+    padding: 0.2rem 0.4rem;
+    border-radius: 0.25rem;
+  }
+  
+  .editor-content table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 1rem 0;
+  }
+  
+  .editor-content table th,
+  .editor-content table td {
+    border: 1px solid #dee2e6;
+    padding: 0.5rem;
+    text-align: left;
+  }
+  
+  .editor-content table th {
+    background-color: #f8f9fa;
+  }
+</style>
+{% endblock %} 

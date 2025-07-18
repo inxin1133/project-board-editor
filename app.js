@@ -22,7 +22,7 @@ app.use(session({
   store: MongoStore.create({
     mongoUrl: dbConnect,
     collectionName: 'sessions',
-    dbName: 'projectBoard',
+    dbName: 'projectBoard-editor',
   }),
   cookie: { maxAge: 1000 * 60 * 60 * 3 }, // 세션 만료 시간 3시간
 }));
@@ -79,12 +79,14 @@ const userRouter = require('./routes/user');
 const boardRouter = require('./routes/board');
 const commentRouter = require('./routes/comment');
 const attachmentRouter = require('./routes/attachment');
+const editorRouter = require('./routes/editor');
 
 app.use('/', indexRouter);
 app.use('/user', userRouter);
 app.use('/board', boardRouter);
 app.use('/comment', commentRouter);
 app.use('/attachment', attachmentRouter);
+app.use('/editor', editorRouter);
 
 app.listen(PORT, () => {
   console.log(`Server is running on http://localhost:${PORT}`);

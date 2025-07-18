@@ -17,6 +17,7 @@
       <div class="collapse navbar-collapse" id="navbarNav">
         <ul class="navbar-nav ms-auto">
           <li class="nav-item"><a class="nav-link{% if currentPath=='/home' %} active{% endif %}" href="/home">Home</a></li>
+          <li class="nav-item"><a class="nav-link{% if currentPath=='/editor' %} active{% endif %}" href="/editor">Editor</a></li>
           {% if me.role == 'admin' %}
             <li class="nav-item"><a class="nav-link{% if currentPath=='/user' %} active{% endif %}" href="/user">User</a></li>
           {% endif %}

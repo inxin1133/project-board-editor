@@ -1,6 +1,4 @@
 const bcrypt = require('bcrypt'); // 비밀번호 해싱
-const mongoose = require('mongoose'); // MongoDB 연결
-const nodemailer = require('nodemailer'); // 이메일 전송
 const XLSX = require('xlsx'); // 엑셀 파일 처리
 const path = require('path'); // 경로 처리
 const fs = require('fs'); // 파일 시스템 처리
@@ -8,24 +6,7 @@ const fs = require('fs'); // 파일 시스템 처리
 const authService = require('../services/authService'); // 인증 서비스
 const User = require('../schemas/userSchema'); // 사용자 스키마 
 const Attachment = require('../schemas/attachmentSchema'); // Attachment 모델 추가
-
-const dbConnect = process.env.MONGODB_CONNECT; // MongoDB 연결 문자열
-
-// MongoDB 연결
-mongoose.connect( dbConnect, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-  dbName: 'projectBoard',
-});
-
-// 이메일 전송기
-const transporter = nodemailer.createTransport({
-  service: 'gmail', // 실제 서비스에 맞게 변경 필요
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
-  },
-});
+const { transporter, utils } = require('./index'); // 공통 설정 및 유틸리티
 
 // 회원가입
 exports.signup = async (req, res) => {
@@ -116,14 +97,9 @@ exports.resend2fa = async (req, res) => {
     if (!user) {
       return res.status(400).send('사용자를 찾을 수 없습니다.');
     }
-    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    const code = utils.generate2faCode();
     req.session.signup2faCode = code;
-    await transporter.sendMail({
-      from: process.env.EMAIL_USER,
-      to: user.email,
-      subject: '[ProjectBoard] 2차 인증코드 재발송',
-      text: `인증코드: ${code}`,
-    });
+    await utils.sendEmail(user.email, '[projectBoard-editor] 2차 인증코드 재발송', `인증코드: ${code}`);
     res.render('signup2fa', { title: '2차 인증', message: '인증코드가 이메일로 재발송되었습니다.' });
   } catch (err) {
     console.error('2차 인증 재발송 오류:', err);
@@ -142,12 +118,7 @@ exports.findId = async (req, res) => {
       return res.render('findId', { message: '입력한 정보가 없습니다.' });
     }
     // 이메일로 아이디 전송
-    await transporter.sendMail({
-      from: process.env.EMAIL_USER,
-      to: email,
-      subject: '[ProjectBoard] 아이디 찾기 결과',
-      text: `회원님의 아이디는 [${user.username}] 입니다.`,
-    });
+    await utils.sendEmail(email, '[projectBoard-editor] 아이디 찾기 결과', `회원님의 아이디는 [${user.username}] 입니다.`);
     return res.render('findId', { message: `${email} 로 아이디 정보를 보냈습니다.`, emailSent: true });
   } catch (err) {
     console.error('아이디 찾기 오류:', err);
@@ -166,18 +137,13 @@ exports.findPw = async (req, res) => {
       return res.render('findPw', { message: '입력한 정보가 없습니다.' });
     }
     // 임시 비밀번호 생성
-    const tempPassword = Math.random().toString(36).slice(-8);
+    const tempPassword = utils.generateTempPassword();
     const hash = await bcrypt.hash(tempPassword, 10);
     user.password = hash;
     user.tempPassword = tempPassword;
     await user.save();
     // 이메일로 임시 비밀번호 전송
-    await transporter.sendMail({
-      from: process.env.EMAIL_USER,
-      to: email,
-      subject: '[ProjectBoard] 임시 비밀번호 안내',
-      text: `임시 비밀번호: ${tempPassword}\n로그인 후 반드시 비밀번호를 변경해 주세요.`,
-    });
+    await utils.sendEmail(email, '[projectBoard-editor] 임시 비밀번호 안내', `임시 비밀번호: ${tempPassword}\n로그인 후 반드시 비밀번호를 변경해 주세요.`);
     return res.render('findPw', { message: `${email} 로 임시 비밀번호를 보냈습니다.`, emailSent: true });
   } catch (err) {
     console.error('비밀번호 찾기 오류:', err);
@@ -348,10 +314,8 @@ exports.editInfo = async (req, res) => {
         const oldAttachment = await Attachment.findById(user.profileImage);
         if (oldAttachment) {
           // 파일 시스템에서 삭제
-          const fs = require('fs');
-          const path = require('path');
           const oldPath = path.join(__dirname, '../uploads', oldAttachment.filename);
-          fs.unlink(oldPath, () => {});
+          utils.deleteFile(oldPath);
           await oldAttachment.deleteOne();
         }
       }
@@ -423,7 +387,7 @@ exports.downloadExcelTemplate = (req, res) => {
   res.download(filePath, 'users_template.xlsx', err => {
     if (err) console.error('엑셀 양식 다운로드 오류:', err);
     // 다운로드 후 임시 파일 삭제
-    fs.unlink(filePath, () => {});
+    utils.deleteFile(filePath);
   });
 };
 
@@ -461,7 +425,7 @@ exports.uploadExcel = async (req, res) => {
         errors.push(`${row.username}: DB 오류`);
       }
     }
-    fs.unlink(req.file.path, () => {});
+    utils.deleteFile(req.file.path);
     res.render('user', {
       title: '회원 목록',
       users: await User.find({}, 'username name email state role'),

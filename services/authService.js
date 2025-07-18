@@ -1,14 +1,6 @@
 const bcrypt = require('bcrypt');
 const User = require('../schemas/userSchema');
-const nodemailer = require('nodemailer');
-
-const transporter = nodemailer.createTransport({
-  service: 'gmail',
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
-  },
-});
+const { utils } = require('../controllers/index');
 
 exports.signup = async ({ username, password, email, name, phone }) => {
   const existing = await User.findOne({ $or: [{ username }, { email }] });
@@ -17,13 +9,8 @@ exports.signup = async ({ username, password, email, name, phone }) => {
     await existing.save();
     throw new Error('이미 존재하는 아이디 또는 이메일입니다.');
   }
-  const code = Math.floor(100000 + Math.random() * 900000).toString();
-  await transporter.sendMail({
-    from: process.env.EMAIL_USER,
-    to: email,
-    subject: '[ProjectBoard] 회원가입 2차 인증코드',
-    text: `인증코드: ${code}`,
-  });
+  const code = utils.generate2faCode();
+  await utils.sendEmail(email, '[ProjectBoard-editor] 회원가입 2차 인증코드', `인증코드: ${code}`);
   const hash = await bcrypt.hash(password, 10);
   const user = await User.create({
     username,
@@ -55,42 +42,27 @@ exports.login = async ({ username, password }) => {
 };
 
 exports.send2faCode = async (user) => {
-  const code = Math.floor(100000 + Math.random() * 900000).toString();
-  await transporter.sendMail({
-    from: process.env.EMAIL_USER,
-    to: user.email,
-    subject: '[ProjectBoard] 2차 인증코드 재발송',
-    text: `인증코드: ${code}`,
-  });
+  const code = utils.generate2faCode();
+  await utils.sendEmail(user.email, '[ProjectBoard-editor] 2차 인증코드 재발송', `인증코드: ${code}`);
   return code;
 };
 
 exports.findId = async ({ name, email }) => {
   const user = await User.findOne({ name, email });
   if (!user) throw new Error('입력한 정보가 없습니다.');
-  await transporter.sendMail({
-    from: process.env.EMAIL_USER,
-    to: email,
-    subject: '[ProjectBoard] 아이디 찾기 결과',
-    text: `회원님의 아이디는 [${user.username}] 입니다.`,
-  });
+  await utils.sendEmail(email, '[ProjectBoard-editor] 아이디 찾기 결과', `회원님의 아이디는 [${user.username}] 입니다.`);
   return user;
 };
 
 exports.findPw = async ({ username, email }) => {
   const user = await User.findOne({ username, email });
   if (!user) throw new Error('입력한 정보가 없습니다.');
-  const tempPassword = Math.random().toString(36).slice(-8);
+  const tempPassword = utils.generateTempPassword();
   const hash = await bcrypt.hash(tempPassword, 10);
   user.password = hash;
   user.tempPassword = tempPassword;
   await user.save();
-  await transporter.sendMail({
-    from: process.env.EMAIL_USER,
-    to: email,
-    subject: '[ProjectBoard] 임시 비밀번호 안내',
-    text: `임시 비밀번호: ${tempPassword}\n로그인 후 반드시 비밀번호를 변경해 주세요.`,
-  });
+  await utils.sendEmail(email, '[ProjectBoard-editor] 임시 비밀번호 안내', `임시 비밀번호: ${tempPassword}\n로그인 후 반드시 비밀번호를 변경해 주세요.`);
   return user;
 };
 
