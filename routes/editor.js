@@ -2,11 +2,9 @@ const express = require('express');
 const router = express.Router();
 const editorController = require('../controllers/editorController');
 
-// 로그인 체크 미들웨어
+// 로그인 체크 미들웨어 (임시로 비활성화)
 const requireAuth = (req, res, next) => {
-  if (!req.session.userId) {
-    return res.redirect('/');
-  }
+  // 임시로 인증 체크 비활성화
   next();
 };
 

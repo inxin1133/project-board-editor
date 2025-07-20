@@ -49,257 +49,202 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css">
 
-<!-- Editor.js -->
-<script src="https://unpkg.com/@editorjs/editorjs@latest"></script>
-<script src="https://unpkg.com/@editorjs/header@latest"></script>
-<script src="https://unpkg.com/@editorjs/list@latest"></script>
-<script src="https://unpkg.com/@editorjs/paragraph@latest"></script>
-<script src="https://unpkg.com/@editorjs/quote@latest"></script>
-<script src="https://unpkg.com/@editorjs/marker@latest"></script>
-<script src="https://unpkg.com/@editorjs/code@latest"></script>
-<script src="https://unpkg.com/@editorjs/delimiter@latest"></script>
-<script src="https://unpkg.com/@editorjs/table@latest"></script>
+<!-- Editor.js and Plugins from jsDelivr CDN -->
+<script src="https://cdn.jsdelivr.net/npm/@editorjs/editorjs@2.28.2"></script>
+<script src="https://cdn.jsdelivr.net/npm/@editorjs/header@2.7.0"></script>
+<script src="https://cdn.jsdelivr.net/npm/@editorjs/list@1.8.0"></script>
+<script src="https://cdn.jsdelivr.net/npm/@editorjs/quote@2.5.0"></script>
+<script src="https://cdn.jsdelivr.net/npm/@editorjs/marker@1.3.0"></script>
+<script src="https://cdn.jsdelivr.net/npm/@editorjs/code@2.8.0"></script>
+<script src="https://cdn.jsdelivr.net/npm/@editorjs/delimiter@1.3.0"></script>
 
 <script>
-  let editor;
-  let useSimpleTextarea = false;
-  let isSubmitting = false; // 중복 제출 방지
+  document.addEventListener("DOMContentLoaded", function () {
+    let editor;
+    let useSimpleTextarea = false;
+    let isSubmitting = false;
 
-  document.addEventListener("DOMContentLoaded", function() {
-    if (window.lucide) lucide.createIcons();
-    
-    // Editor.js가 로드되었는지 확인 (더 긴 지연 후 확인)
-    setTimeout(() => {
-      console.log('EditorJS:', typeof EditorJS);
-      console.log('Header:', typeof Header);
-      
-      if (typeof EditorJS !== 'undefined' && typeof Header !== 'undefined') {
-        try {
-          console.log('Editor.js 초기화 시작...');
-          // Editor.js 초기화
-          editor = new EditorJS({
-          holder: 'editor',
-          placeholder: '내용을 입력하세요...',
+    function initializeEditor() {
+      try {
+        console.log("Editor.js 초기화 시작...");
+        const CodeToolClass = typeof CodeTool !== 'undefined' ? CodeTool : (typeof Code !== 'undefined' ? Code : undefined);
+
+        editor = new EditorJS({
+          holder: "editor",
+          placeholder: "내용을 입력하세요...",
           tools: {
-            header: {
-              class: Header,
-              config: {
-                placeholder: '제목을 입력하세요',
-                levels: [1, 2, 3, 4, 5, 6],
-                defaultLevel: 2
-              }
-            },
-            list: {
-              class: List,
-              inlineToolbar: true,
-              config: {
-                defaultStyle: 'unordered'
-              }
-            },
-            paragraph: {
-              class: Paragraph,
-              inlineToolbar: true
-            },
-            quote: {
-              class: Quote,
-              inlineToolbar: true,
-              config: {
-                quotePlaceholder: '인용구를 입력하세요',
-                captionPlaceholder: '작성자를 입력하세요'
-              }
-            },
-            marker: {
-              class: Marker,
-              shortcut: 'CMD+SHIFT+M'
-            },
-            code: {
-              class: CodeTool,
-              config: {
-                placeholder: '코드를 입력하세요'
-              }
-            },
+            header: Header,
+            list: List,
+            quote: Quote,
+            marker: Marker,
+            code: CodeToolClass,
             delimiter: Delimiter,
-            table: {
-              class: Table,
-              inlineToolbar: true,
-              config: {
-                rows: 2,
-                cols: 3
-              }
-            }
+          },
+          onReady: () => {
+            console.log("Editor.js가 성공적으로 준비되었습니다.");
           },
           data: {
-            blocks: [
-              {
-                type: "paragraph",
-                data: {
-                  text: ""
-                }
-              }
-            ]
-          }
+            blocks: [{ type: "paragraph", data: { text: "" } }],
+          },
         });
       } catch (error) {
-        console.error('Editor.js 초기화 오류:', error);
+        console.error("Editor.js 초기화 중 오류가 발생했습니다:", error);
         fallbackToTextarea();
       }
-    } else {
-      console.warn('Editor.js 라이브러리가 로드되지 않았습니다. 기본 텍스트 영역을 사용합니다.');
-      fallbackToTextarea();
-    }
-    }, 100); // 100ms 지연 후 확인
-  });
-
-  // Editor.js 로드 실패 시 기본 텍스트 영역으로 대체
-  function fallbackToTextarea() {
-    useSimpleTextarea = true;
-    const editorDiv = document.getElementById('editor');
-    editorDiv.innerHTML = `
-      <textarea class="form-control" id="simpleContent" rows="15" placeholder="내용을 입력하세요..."></textarea>
-      <div class="form-text text-muted mt-2">
-        <small>Editor.js가 로드되지 않아 기본 텍스트 영역을 사용합니다.</small>
-      </div>
-    `;
-  }
-
-  // 폼 제출 처리
-  document.getElementById('editorForm').addEventListener('submit', async function(e) {
-    e.preventDefault();
-    
-    // 중복 제출 방지
-    if (isSubmitting) {
-      toastr.warning('처리 중입니다. 잠시만 기다려주세요.');
-      return;
-    }
-    
-    const title = document.getElementById('title').value.trim();
-    if (!title) {
-      toastr.error('제목을 입력해주세요.');
-      return;
     }
 
-    let content = '';
-    
-    // 제출 상태 설정
-    isSubmitting = true;
-    const submitBtn = document.querySelector('button[type="submit"]');
-    const originalText = submitBtn.textContent;
-    submitBtn.textContent = '처리 중...';
-    submitBtn.disabled = true;
-    
-    try {
-      if (useSimpleTextarea) {
-        // 기본 텍스트 영역 사용
-        const simpleContent = document.getElementById('simpleContent');
-        if (!simpleContent) {
-          toastr.error('내용 입력 영역을 찾을 수 없습니다.');
-          return;
-        }
-        content = simpleContent.value.trim();
-        if (!content) {
-          toastr.error('내용을 입력해주세요.');
-          return;
-        }
-        // 줄바꿈을 <br> 태그로 변환
-        content = content.replace(/\n/g, '<br>');
-      } else {
-        // Editor.js 사용
-        if (!editor) {
-          toastr.error('에디터가 초기화되지 않았습니다.');
-          return;
-        }
-        
-        // Editor.js 데이터 가져오기
-        const editorData = await editor.save();
-        
-        // HTML로 변환
-        content = convertEditorDataToHTML(editorData);
-        
-        if (!content || content.trim() === '') {
-          toastr.error('내용을 입력해주세요.');
-          return;
-        }
+    function fallbackToTextarea() {
+      useSimpleTextarea = true;
+      const editorDiv = document.getElementById("editor");
+      if (editorDiv) {
+        editorDiv.innerHTML = `
+          <textarea class="form-control" id="simpleContent" rows="15" placeholder="내용을 입력하세요..."></textarea>
+          <div class="form-text text-muted mt-2">
+            <small>Editor.js가 로드되지 않아 기본 텍스트 영역을 사용합니다.</small>
+          </div>
+        `;
       }
-      
-      const response = await fetch('/editor/write', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          title: title,
-          content: content
-        })
-      });
-
-      const result = await response.json();
-      
-      if (result.success) {
-        toastr.success(result.message);
-        // 즉시 리다이렉트
-        window.location.href = result.redirect;
-      } else {
-        toastr.error(result.message);
-      }
-    } catch (error) {
-      console.error('Error:', error);
-      toastr.error('게시글 작성 중 오류가 발생했습니다.');
-    } finally {
-      // 제출 상태 초기화
-      isSubmitting = false;
-      submitBtn.textContent = originalText;
-      submitBtn.disabled = false;
     }
-  });
 
-  // Editor.js 데이터를 HTML로 변환하는 함수
-  function convertEditorDataToHTML(editorData) {
-    let html = '';
-    
-    editorData.blocks.forEach(block => {
-      switch (block.type) {
-        case 'header':
-          html += `<h${block.data.level}>${block.data.text}</h${block.data.level}>`;
-          break;
-        case 'paragraph':
-          html += `<p>${block.data.text}</p>`;
-          break;
-        case 'list':
-          const listType = block.data.style === 'ordered' ? 'ol' : 'ul';
-          html += `<${listType}>`;
-          block.data.items.forEach(item => {
-            html += `<li>${item}</li>`;
-          });
-          html += `</${listType}>`;
-          break;
-        case 'quote':
-          html += `<blockquote><p>${block.data.text}</p>`;
-          if (block.data.caption) {
-            html += `<cite>${block.data.caption}</cite>`;
+    const requiredLibs = {
+      EditorJS: "EditorJS",
+      Header: "@editorjs/header",
+      List: "@editorjs/list",
+      Quote: "@editorjs/quote",
+      Marker: "@editorjs/marker",
+      Code: "@editorjs/code",
+      Delimiter: "@editorjs/delimiter",
+    };
+
+    let attempts = 0;
+    const maxAttempts = 50; // 5초간 시도
+
+    const checkAndInitialize = () => {
+      const missing = [];
+      for (const libName in requiredLibs) {
+        if (libName === 'Code') {
+          if (typeof window.CodeTool === 'undefined' && typeof window.Code === 'undefined') {
+            missing.push(requiredLibs[libName]);
           }
-          html += '</blockquote>';
-          break;
-        case 'code':
-          html += `<pre><code>${block.data.code}</code></pre>`;
-          break;
-        case 'delimiter':
-          html += '<hr>';
-          break;
-        case 'table':
-          html += '<table><tbody>';
-          block.data.content.forEach(row => {
-            html += '<tr>';
-            row.forEach(cell => {
-              html += `<td>${cell}</td>`;
-            });
-            html += '</tr>';
-          });
-          html += '</tbody></table>';
-          break;
+        } else if (typeof window[libName] === "undefined") {
+          missing.push(requiredLibs[libName]);
+        }
+      }
+
+      if (missing.length === 0) {
+        console.log("모든 Editor.js 라이브러리가 로드되었습니다.");
+        initializeEditor();
+      } else if (attempts < maxAttempts) {
+        attempts++;
+        setTimeout(checkAndInitialize, 100);
+      } else {
+        console.error("다음 Editor.js 라이브러리를 로드하지 못했습니다:", missing.join(', '));
+        fallbackToTextarea();
+      }
+    };
+
+    checkAndInitialize();
+
+    document.getElementById('editorForm').addEventListener('submit', async function(e) {
+      e.preventDefault();
+      if (isSubmitting) return;
+      
+      const title = document.getElementById('title').value.trim();
+      if (!title) {
+        toastr.error('제목을 입력해주세요.');
+        return;
+      }
+
+      let content = '';
+      isSubmitting = true;
+      const submitBtn = document.querySelector('button[type="submit"]');
+      const originalText = submitBtn.textContent;
+      submitBtn.textContent = '처리 중...';
+      submitBtn.disabled = true;
+      
+      try {
+        if (useSimpleTextarea) {
+          content = document.getElementById('simpleContent').value.trim();
+          if (!content) {
+            toastr.error('내용을 입력해주세요.');
+            return;
+          }
+          content = content.replace(/\n/g, '<br>');
+        } else {
+          const editorData = await editor.save();
+          content = convertEditorDataToHTML(editorData);
+          if (!content || content.trim() === '') {
+            toastr.error('내용을 입력해주세요.');
+            return;
+          }
+        }
+        
+        const response = await fetch('/editor/write', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ title: title, content: content })
+        });
+
+        const result = await response.json();
+        
+        if (result.success) {
+          toastr.success(result.message);
+          window.location.href = result.redirect;
+        } else {
+          toastr.error(result.message);
+        }
+      } catch (error) {
+        console.error('Error:', error);
+        toastr.error('게시글 작성 중 오류가 발생했습니다.');
+      } finally {
+        isSubmitting = false;
+        submitBtn.textContent = originalText;
+        submitBtn.disabled = false;
       }
     });
-    
-    return html;
-  }
+
+    function convertEditorDataToHTML(editorData) {
+      let html = '';
+      editorData.blocks.forEach(block => {
+        switch (block.type) {
+          case 'header':
+            html += `<h${block.data.level}>${block.data.text}</h${block.data.level}>`;
+            break;
+          case 'paragraph':
+            html += `<p>${block.data.text}</p>`;
+            break;
+          case 'list':
+            const listType = block.data.style === 'ordered' ? 'ol' : 'ul';
+            html += `<${listType}>`;
+            block.data.items.forEach(item => { html += `<li>${item}</li>`; });
+            html += `</${listType}>`;
+            break;
+          case 'quote':
+            html += `<blockquote><p>${block.data.text}</p>`;
+            if (block.data.caption) {
+              html += `<cite>${block.data.caption}</cite>`;
+            }
+            html += '</blockquote>';
+            break;
+          case 'code':
+            html += `<pre><code>${block.data.code}</code></pre>`;
+            break;
+          case 'delimiter':
+            html += '<hr>';
+            break;
+          case 'table':
+            html += '<table><tbody>';
+            block.data.content.forEach(row => {
+              html += '<tr>';
+              row.forEach(cell => { html += `<td>${cell}</td>`; });
+              html += '</tr>';
+            });
+            html += '</tbody></table>';
+            break;
+        }
+      });
+      return html;
+    }
+  });
 </script>
-{% endblock %} 
+{% endblock %}

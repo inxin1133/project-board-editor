@@ -50,99 +50,132 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css">
 
 <!-- Editor.js -->
-<script src="https://unpkg.com/@editorjs/editorjs@latest"></script>
-<script src="https://unpkg.com/@editorjs/header@latest"></script>
-<script src="https://unpkg.com/@editorjs/list@latest"></script>
-<script src="https://unpkg.com/@editorjs/paragraph@latest"></script>
-<script src="https://unpkg.com/@editorjs/quote@latest"></script>
-<script src="https://unpkg.com/@editorjs/marker@latest"></script>
-<script src="https://unpkg.com/@editorjs/code@latest"></script>
-<script src="https://unpkg.com/@editorjs/delimiter@latest"></script>
-<script src="https://unpkg.com/@editorjs/table@latest"></script>
+<script src="https://unpkg.com/@editorjs/editorjs@2.30.8"></script>
+<script src="https://unpkg.com/@editorjs/header@2.9.0"></script>
+<script src="https://unpkg.com/@editorjs/list@1.10.0"></script>
+<script src="https://unpkg.com/@editorjs/paragraph@2.11.0"></script>
+<script src="https://unpkg.com/@editorjs/quote@2.6.0"></script>
+<script src="https://unpkg.com/@editorjs/marker@1.4.0"></script>
+<script src="https://unpkg.com/@editorjs/code@2.9.0"></script>
+<script src="https://unpkg.com/@editorjs/delimiter@1.4.0"></script>
 
 <script>
   let editor;
   let useSimpleTextarea = false;
-  let isSubmitting = false; // 중복 제출 방지
+  let isSubmitting = false;
 
+  // Editor.js 초기화 함수
+  async function initializeEditor() {
+    try {
+      console.log('Editor.js 초기화 시작...');
+      
+      // HTML을 Editor.js 데이터로 변환
+      const htmlContent = `{{ post.content | safe }}`;
+      const editorData = convertHTMLToEditorData(htmlContent);
+      
+      editor = new EditorJS({
+        holder: 'editor',
+        placeholder: '내용을 입력하세요...',
+        tools: {
+          header: {
+            class: Header,
+            config: {
+              placeholder: '제목을 입력하세요',
+              levels: [1, 2, 3],
+              defaultLevel: 2
+            }
+          },
+          list: {
+            class: List,
+            inlineToolbar: true,
+            config: {
+              defaultStyle: 'unordered'
+            }
+          },
+          paragraph: {
+            class: Paragraph,
+            inlineToolbar: true
+          },
+          quote: {
+            class: Quote,
+            inlineToolbar: true,
+            config: {
+              quotePlaceholder: '인용구를 입력하세요',
+              captionPlaceholder: '작성자를 입력하세요'
+            }
+          },
+          marker: {
+            class: Marker,
+            shortcut: 'CMD+SHIFT+M'
+          },
+          code: {
+            class: CodeTool,
+            config: {
+              placeholder: '코드를 입력하세요'
+            }
+          },
+          delimiter: Delimiter
+        },
+        data: editorData
+      });
+
+      console.log('Editor.js 초기화 완료');
+    } catch (error) {
+      console.error('Editor.js 초기화 오류:', error);
+      fallbackToTextarea();
+    }
+  }
+
+  // Editor.js 로드 실패 시 기본 텍스트 영역으로 대체
+  function fallbackToTextarea() {
+    useSimpleTextarea = true;
+    const editorDiv = document.getElementById('editor');
+    const htmlContent = `{{ post.content | safe }}`;
+    // HTML 태그 제거하고 텍스트만 추출
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = htmlContent;
+    const textContent = tempDiv.textContent || tempDiv.innerText || '';
+    
+    editorDiv.innerHTML = `
+      <textarea class="form-control" id="simpleContent" rows="15" placeholder="내용을 입력하세요...">${textContent}</textarea>
+      <div class="form-text text-muted mt-2">
+        <small>Editor.js가 로드되지 않아 기본 텍스트 영역을 사용합니다.</small>
+      </div>
+    `;
+  }
+
+  // 페이지 로드 시 초기화
   document.addEventListener("DOMContentLoaded", function() {
     if (window.lucide) lucide.createIcons();
     
-    // Editor.js가 로드되었는지 확인 (더 긴 지연 후 확인)
-    setTimeout(() => {
-      console.log('EditorJS:', typeof EditorJS);
-      console.log('Header:', typeof Header);
+    // Editor.js 라이브러리들이 모두 로드될 때까지 대기
+    let attempts = 0;
+    const maxAttempts = 50; // 5초 대기
+    
+    const checkAndInitialize = () => {
+      attempts++;
       
-      if (typeof EditorJS !== 'undefined' && typeof Header !== 'undefined') {
-              try {
-          console.log('Editor.js 초기화 시작...');
-          // HTML을 Editor.js 데이터로 변환
-          const htmlContent = `{{ post.content | safe }}`;
-          const editorData = convertHTMLToEditorData(htmlContent);
-          
-          // Editor.js 초기화
-          editor = new EditorJS({
-          holder: 'editor',
-          placeholder: '내용을 입력하세요...',
-          tools: {
-            header: {
-              class: Header,
-              config: {
-                placeholder: '제목을 입력하세요',
-                levels: [1, 2, 3, 4, 5, 6],
-                defaultLevel: 2
-              }
-            },
-            list: {
-              class: List,
-              inlineToolbar: true,
-              config: {
-                defaultStyle: 'unordered'
-              }
-            },
-            paragraph: {
-              class: Paragraph,
-              inlineToolbar: true
-            },
-            quote: {
-              class: Quote,
-              inlineToolbar: true,
-              config: {
-                quotePlaceholder: '인용구를 입력하세요',
-                captionPlaceholder: '작성자를 입력하세요'
-              }
-            },
-            marker: {
-              class: Marker,
-              shortcut: 'CMD+SHIFT+M'
-            },
-            code: {
-              class: CodeTool,
-              config: {
-                placeholder: '코드를 입력하세요'
-              }
-            },
-            delimiter: Delimiter,
-            table: {
-              class: Table,
-              inlineToolbar: true,
-              config: {
-                rows: 2,
-                cols: 3
-              }
-            }
-          },
-          data: editorData
-        });
-      } catch (error) {
-        console.error('Editor.js 초기화 오류:', error);
+      // 필수 라이브러리들만 확인
+      if (typeof EditorJS !== 'undefined' && 
+          typeof Header !== 'undefined' && 
+          typeof List !== 'undefined' && 
+          typeof Paragraph !== 'undefined' && 
+          typeof Quote !== 'undefined' && 
+          typeof Marker !== 'undefined' && 
+          typeof CodeTool !== 'undefined' && 
+          typeof Delimiter !== 'undefined') {
+        console.log('모든 Editor.js 라이브러리가 로드되었습니다.');
+        initializeEditor();
+      } else if (attempts < maxAttempts) {
+        console.log(`Editor.js 라이브러리 로딩 대기 중... (${attempts}/${maxAttempts})`);
+        setTimeout(checkAndInitialize, 100);
+      } else {
+        console.warn('Editor.js 라이브러리가 로드되지 않았습니다. 기본 텍스트 영역을 사용합니다.');
         fallbackToTextarea();
       }
-    } else {
-      console.warn('Editor.js 라이브러리가 로드되지 않았습니다. 기본 텍스트 영역을 사용합니다.');
-      fallbackToTextarea();
-    }
-    }, 100); // 100ms 지연 후 확인
+    };
+    
+    checkAndInitialize();
   });
 
   // Editor.js 로드 실패 시 기본 텍스트 영역으로 대체

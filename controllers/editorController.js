@@ -49,6 +49,13 @@ class EditorController {
       }
 
       const user = await User.findById(req.session.userId);
+
+      if (!user) {
+        return res.status(401).json({
+          success: false,
+          message: '로그인이 필요합니다. 먼저 로그인해주세요.',
+        });
+      }
       
       const editorData = {
         title: title.trim(),
@@ -58,12 +65,12 @@ class EditorController {
         authorUsername: user.username
       };
 
-      await editorService.createEditor(editorData);
+      const newPost = await editorService.createEditor(editorData);
       
       res.json({ 
         success: true, 
         message: '게시글이 성공적으로 작성되었습니다.',
-        redirect: '/editor'
+        redirect: `/editor/view/${newPost._id}`
       });
     } catch (error) {
       console.error('Editor 작성 오류:', error);
