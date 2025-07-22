@@ -58,6 +58,7 @@
 <script src="https://unpkg.com/@editorjs/marker@1.4.0"></script>
 <script src="https://unpkg.com/@editorjs/code@2.9.0"></script>
 <script src="https://unpkg.com/@editorjs/delimiter@1.4.0"></script>
+<script src="https://unpkg.com/@editorjs/table@2.2.2"></script>
 
 <script>
   let editor;
@@ -114,7 +115,15 @@
               placeholder: '코드를 입력하세요'
             }
           },
-          delimiter: Delimiter
+          delimiter: Delimiter,
+          table: {
+            class: Table,
+            inlineToolbar: true,
+            config: {
+              rows: 2,
+              cols: 2,
+            },
+          },
         },
         data: editorData
       });
@@ -163,7 +172,8 @@
           typeof Quote !== 'undefined' && 
           typeof Marker !== 'undefined' && 
           typeof CodeTool !== 'undefined' && 
-          typeof Delimiter !== 'undefined') {
+          typeof Delimiter !== 'undefined' &&
+          typeof Table !== 'undefined') {
         console.log('모든 Editor.js 라이브러리가 로드되었습니다.');
         initializeEditor();
       } else if (attempts < maxAttempts) {
@@ -367,14 +377,17 @@
             break;
           case 'table':
             const rows = Array.from(node.querySelectorAll('tr')).map(row => 
-              Array.from(row.querySelectorAll('td, th')).map(cell => cell.textContent)
+              Array.from(row.querySelectorAll('td, th')).map(cell => cell.innerHTML)
             );
-            blocks.push({
-              type: 'table',
-              data: {
-                content: rows
-              }
-            });
+            if (rows.length > 0) {
+              blocks.push({
+                type: 'table',
+                data: {
+                  withHeadings: node.querySelector('th') !== null,
+                  content: rows
+                }
+              });
+            }
             break;
           default:
             // 기타 요소는 paragraph로 처리

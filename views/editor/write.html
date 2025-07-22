@@ -57,6 +57,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@editorjs/marker@1.3.0"></script>
 <script src="https://cdn.jsdelivr.net/npm/@editorjs/code@2.8.0"></script>
 <script src="https://cdn.jsdelivr.net/npm/@editorjs/delimiter@1.3.0"></script>
+<script src="https://cdn.jsdelivr.net/npm/@editorjs/table@2.2.2"></script>
 
 <script>
   document.addEventListener("DOMContentLoaded", function () {
@@ -79,6 +80,7 @@
             marker: Marker,
             code: CodeToolClass,
             delimiter: Delimiter,
+            table: Table,
           },
           onReady: () => {
             console.log("Editor.js가 성공적으로 준비되었습니다.");
@@ -114,6 +116,7 @@
       Marker: "@editorjs/marker",
       Code: "@editorjs/code",
       Delimiter: "@editorjs/delimiter",
+      Table: "@editorjs/table",
     };
 
     let attempts = 0;
