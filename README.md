@@ -1,5 +1,5 @@
 # git command 
-먼저 github에 원격 저장소를 만들어 놓아야 함
+* 먼저 github에 원격 저장소를 만들어 놓아야 함
 
 ### 깃초기화(새로운 프로젝트 또는 IDE환경에서 초기화)
 $ git init
@@ -56,17 +56,17 @@ $ git clone https://github.com/사용자명/저장소명.git
 ---------------------------------------------------------------------------------
 
 ## 원격 저장소의 변경사항을 가져와서 로컬과 병합
-로컬 브랜치(master)가 원격 브랜치(origin/master)보다 뒤처져 있는 경우
+* 로컬 브랜치(master)가 원격 브랜치(origin/master)보다 뒤처져 있는 경우
 ### (원격 저장소에 로컬에 없는 커밋이 있음), 리모트 변경사항을 먼저 가져와야 함
-master 브랜치를 pull하여 업데이트
+* master 브랜치를 pull하여 업데이트
 
 $ git pull origin master
 
 ### master 브랜치를 fetch하여 업데이트
 $ git fetch origin master
 
-pull 과 fetch 의 차이점은 merge 작업을 하느냐 안하느냐로 나뉘어지며.
-pull 은 fetch + merge 작업이라고 생각하시면 됩니다.
+* pull 과 fetch 의 차이점은 merge 작업을 하느냐 안하느냐로 나뉘어지며.
+* pull 은 fetch + merge 작업이라고 생각하시면 됩니다.
 
 -------------------------------------------------------------------------------
 
@@ -98,10 +98,10 @@ $ git rm [File Name]
 $ git rm --cached [File Name]
 
 ### 예시
-.idea/modules.xml 파일 삭제
+*.idea/modules.xml 파일 삭제
 $ git rm --cached .idea/modules.xml
 
-.idea 폴더 하위의 모든 파일 삭제 
+* .idea 폴더 하위의 모든 파일 삭제 
 $ git rm --cached -r .idea/
 
 
@@ -111,10 +111,10 @@ $ git rm --cached -r .idea/
 
 ## 소스병합
 ### master -> some_file.txt의 내용
-1번째 단계 HEAD
+* 1번째 단계 HEAD
 > I'm a file.
 
-# sub -> some_file.txt의 내용
+### sub -> some_file.txt의 내용
 ### 2번째 단계 HEAD (최신)
 > I'm a file.
 >
@@ -125,9 +125,9 @@ $ git checkout -f master
 
 ### 현재 브랜치 master, 대상 브랜치 sub.
 $ git merge sub
-main에서 sub를 머지합니다.
-HEAD -> main
-sub  -> sub
+* main에서 sub를 머지합니다.
+* HEAD -> main
+* sub  -> sub
 
 ### merge 이후 main -> some_file.txt
 > I'm a file.
